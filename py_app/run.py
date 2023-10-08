@@ -74,7 +74,7 @@ class ImageViewer(QWidget):
         self.display_image(self.image_data)
 
     def display_image(self, img_data):
-        # print(img_data)
+        print(img_data)
         # np_img_data = np.array(img_data, dtype=np.float32).reshape(
         #     (self.height, self.width, self.channels)
         # )
@@ -86,9 +86,7 @@ class ImageViewer(QWidget):
         #     np_img_data.data, width, height, bytes_per_line, QImage.Format_RGB888
         # )
 
-        int_values = [
-            min(255, max(0, int(x * 255))) if not math.isnan(x) else 0 for x in img_data
-        ]
+        int_values = [min(255, max(0, int(x * 255))) for x in img_data]
         byte_array = bytes(int_values)
         # Create a QImage from the byte array.
         q_img = QImage(byte_array, self.width, self.height, QImage.Format_RGBA8888)
