@@ -3,6 +3,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <omp.h>
 #include <OpenImageIO/imageio.h>
 #include <OpenImageIO/imagebuf.h>
 #include <OpenImageIO/imagebufalgo.h>
@@ -32,13 +33,25 @@ void normalize_image(std::vector<float>& pixels)
 
 void apply_gamma(std::vector<float>& pixels, float gamma)
 {
-    Timer timer("set_gamma");
-
+    // Timer timer("set_gamma");
+    float inv_gamma = 1.0f / gamma;
+    #pragma omp parallel for
     for (int i = 0; i < pixels.size(); ++i)
     {
-
-        pixels[i] = pow(pixels[i], (1.0f / gamma));
+        pixels[i] = pow(pixels[i], inv_gamma);
     }
+    
+    // Using LUT tables
+    // std::vector<float> lut(256);
+    // for (int i = 0; i < 256; ++i)
+    // {
+    //     lut[i] = pow(i / 255.0f, inv_gamma);
+    // }
+
+    // for (int i = 0; i < pixels.size(); ++i)
+    // {
+    //     pixels[i] = lut[static_cast<int>(pixels[i] * 255)];
+    // }
 }
 
 std::vector<float> read_image(const std::string& source_path, int& width, int& height, int& channels)
