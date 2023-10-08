@@ -17,14 +17,14 @@ int main()
     
     if (pixels.empty())
     {
-        std::cerr << "Failed to read image!" << std::endl;
+        std::cerr << "Failed to read image" << std::endl;
         return 1;
     }
     
     float gamma = 2.2f;
-    std::vector<float> processed_pixels = process_image(pixels, width, height, channels, gamma);
+    std::vector<float> processed_pixels = process_image(pixels, gamma);
     if (!write_image(target_path, processed_pixels, width, height, channels)) {
-        std::cerr << "Failed to write image!" << std::endl;
+        std::cerr << "Failed to write image" << std::endl;
         return 1;
     }
     

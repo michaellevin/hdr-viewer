@@ -129,7 +129,7 @@ std::vector<float> scanline_image(const std::string& source_path, int& width, in
     width = file_spec.width;
     height = file_spec.height;
     channels = file_spec.nchannels;
-    std::cout << "Original size: " << width << "x" << height << ";" << std::endl;
+    std::cout << "Original size " << width << "x" << height << ";" << std::endl;
 
     // calculate new height
     int new_height = static_cast<int>(float(height) / float(width) * new_width);
@@ -162,7 +162,7 @@ std::vector<float> scanline_image(const std::string& source_path, int& width, in
 }
     
 
-std::vector<float> process_image(std::vector<float>& pixels, int width, int height, int channels, float gamma)
+std::vector<float> process_image(std::vector<float>& pixels, float gamma)
 {
     apply_gamma(pixels, gamma);  
     return pixels;

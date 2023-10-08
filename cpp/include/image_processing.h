@@ -13,9 +13,6 @@ std::vector<float> scanline_image(
 
 std::vector<float> process_image(
     std::vector<float>& pixels, 
-    int width, 
-    int height, 
-    int channels, 
     float gamma
 );
 
