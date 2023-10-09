@@ -48,6 +48,8 @@ class ImageViewer(QWidget):
         self.load_button.clicked.connect(self.load_image)
         self.slider.valueChanged.connect(self.update_gamma)
 
+        self.image_processor = hdr_viewer.ImageProcessor()
+
         self.setWindowTitle("HDR/EXR Image Viewer")
         self.setGeometry(100, 100, 800, 600)
 
@@ -67,8 +69,14 @@ class ImageViewer(QWidget):
     def update_gamma(self):
         gamma_value = self.slider.value() / 10.0
         self.gamma_label.setText(f"Gamma: {gamma_value:.1f}")
-        processed_image_data = hdr_viewer.process_image(self.image_data, gamma_value)
-        self.display_image(processed_image_data)
+        print(self.image_data[0])
+        # processed_image_data = hdr_viewer.process_image(self.image_data, gamma_value)
+        inv_gamma = 1.0 / gamma_value
+        processed_image_data = self.image_processor.apply_gamma_correction(
+            self.image_data, inv_gamma
+        )
+        print(self.image_data[0])
+        self.display_image(self.image_data)
 
     def update_image(self):
         self.display_image(self.image_data)
