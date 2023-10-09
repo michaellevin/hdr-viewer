@@ -8,6 +8,7 @@
 #include <OpenImageIO/imagebuf.h>
 #include <OpenImageIO/imagebufalgo.h>
 OIIO_NAMESPACE_USING
+#include <CL/cl2.hpp>
 
 #include "timer.h"
 
