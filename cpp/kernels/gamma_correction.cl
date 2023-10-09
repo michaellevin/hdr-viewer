@@ -5,4 +5,4 @@ __kernel void apply_gamma(__global float* pixels, const unsigned int count, cons
     {
         pixels[id] = pow(pixels[id], inv_gamma);
     }
-}
+} 

@@ -74,7 +74,7 @@ class ImageViewer(QWidget):
         self.display_image(self.image_data)
 
     def display_image(self, img_data):
-        print(img_data)
+        # print(img_data)
         # np_img_data = np.array(img_data, dtype=np.float32).reshape(
         #     (self.height, self.width, self.channels)
         # )
