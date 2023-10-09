@@ -211,13 +211,13 @@ std::vector<float> scanline_image(const std::string& source_path, int& width,
     return pixels;
 }
 
-// std::vector<float> process_image(std::vector<float>& pixels, float gamma) {
-//     Timer timer("apply gamma");
-//     // apply_gamma(pixels, gamma);
-//     float inv_gamma = 1.0f / gamma;
-//     apply_gamma_correction(pixels, inv_gamma);
-//     return pixels;
-// }
+std::vector<float> process_image(std::vector<float>& pixels, float gamma) {
+    Timer timer("apply gamma");
+    apply_gamma(pixels, gamma);
+    // float inv_gamma = 1.0f / gamma;
+    // apply_gamma_correction(pixels, inv_gamma);
+    return pixels;
+}
 
 bool write_image(const std::string& target_path,
                  const std::vector<float>& pixels, int width, int height,
