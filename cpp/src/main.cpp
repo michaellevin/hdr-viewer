@@ -6,7 +6,7 @@
 
 int main() {
     std::string source_path = "examples/HDR_001.exr";
-    std::string target_path = "examples/HDR_001.jpg";
+    std::string target_path = "examples/HDR_002.jpg";
     ImageProcessor imageProcessor;
     int NEW_WIDTH = 1024;
     int width, height, channels;

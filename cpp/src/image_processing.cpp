@@ -40,6 +40,7 @@ ImageProcessor::ImageProcessor() {
 
 void ImageProcessor::apply_gamma_correction(std::vector<float>& pixels,
                                             float inv_gamma) {
+    Timer timer("apply_gamma_correction");
     // Prepare buffers
     cl::Buffer buffer_pixels(context, CL_MEM_READ_WRITE,
                              pixels.size() * sizeof(float));
