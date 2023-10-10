@@ -6,7 +6,7 @@
 
 int main() {
     std::string source_path = "examples/HDR_001.exr";
-    std::string target_path = "examples/HDR_002.jpg";
+    std::string target_path = "examples/HDR_001.jpg";
     ImageProcessor imageProcessor;
     int NEW_WIDTH = 1024;
     int width, height, channels;
@@ -26,8 +26,9 @@ int main() {
 
     float gamma = 2.2f;
     // std::vector<float> processed_pixels = process_image(pixels, gamma);
-    imageProcessor.apply_gamma_correction(pixels, 1.0f / gamma);
-    if (!write_image(target_path, pixels, width, height, channels)) {
+    std::vector<float> processed_pixels =
+        imageProcessor.apply_gamma_correction(pixels, 1.0f / gamma);
+    if (!write_image(target_path, processed_pixels, width, height, channels)) {
         std::cerr << "Failed to write image" << std::endl;
         return 1;
     }

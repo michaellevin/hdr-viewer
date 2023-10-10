@@ -5,7 +5,6 @@
 #include <string>
 #include <vector>
 
-
 std::vector<float> scanline_image(const std::string& source_path, int& width,
                                   int& height, int& channels, int new_width);
 
@@ -18,7 +17,9 @@ bool write_image(const std::string& target_path,
 class ImageProcessor {
    public:
     ImageProcessor();
-    void apply_gamma_correction(std::vector<float>& pixels, float inv_gamma);
+    // void apply_gamma_correction(std::vector<float>& pixels, float inv_gamma);
+    std::vector<float> apply_gamma_correction(const std::vector<float>& pixels,
+                                              float inv_gamma) const;
 
    private:
     cl::Context context;

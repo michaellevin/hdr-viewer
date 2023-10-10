@@ -3,7 +3,6 @@
 
 #include "../src/image_processing.cpp"
 
-
 namespace py = pybind11;
 
 PYBIND11_MODULE(hdr_viewer_cpp, m) {

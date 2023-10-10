@@ -18,9 +18,21 @@ OIIO_NAMESPACE_USING
 
 ImageProcessor::ImageProcessor() {
     // Load OpenCL source code
-    std::ifstream sourceFile("../../cpp/kernels/gamma_correction.cl");
+    // std::ifstream sourceFile("../../cpp/kernels/gamma_correction.cl");
+    std::ifstream sourceFile(
+        "C:/Cd/scripts/py/hdr-viewer/cpp/kernels/gamma_correction.cl");
+    if (!sourceFile.is_open()) {
+        std::cerr << "Error opening OpenCL source file at "
+                     "../../cpp/kernels/gamma_correction.cl"
+                  << std::endl;
+        exit(EXIT_FAILURE);
+    }
     std::string sourceCode(std::istreambuf_iterator<char>(sourceFile),
                            (std::istreambuf_iterator<char>()));
+
+    // Print the OpenCL source code to the standard output
+    std::cout << "Loaded OpenCL Source Code:\n" << sourceCode << std::endl;
+
     cl::Program::Sources source(1,
                                 {sourceCode.c_str(), sourceCode.length() + 1});
 
@@ -38,30 +50,68 @@ ImageProcessor::ImageProcessor() {
     }
 }
 
-void ImageProcessor::apply_gamma_correction(std::vector<float>& pixels,
-                                            float inv_gamma) {
-    Timer timer("apply_gamma_correction");
+// void ImageProcessor::apply_gamma_correction(std::vector<float>& pixels,
+//                                             float inv_gamma) {
+//     Timer timer("apply_gamma_correction");
+//     // Prepare buffers
+//     cl::Buffer buffer_pixels(context, CL_MEM_READ_WRITE,
+//                              pixels.size() * sizeof(float));
+//     cl::CommandQueue queue(context);
+//     queue.enqueueWriteBuffer(buffer_pixels, CL_TRUE, 0,
+//                              pixels.size() * sizeof(float), pixels.data());
+
+//     // Set kernel arguments
+//     cl::Kernel kernel(program, "apply_gamma");
+//     kernel.setArg(0, buffer_pixels);
+//     kernel.setArg(1, static_cast<unsigned int>(pixels.size()));
+//     kernel.setArg(2, inv_gamma);
+
+//     // Execute kernel
+//     size_t global_work_size = pixels.size();
+//     queue.enqueueNDRangeKernel(kernel, cl::NullRange,
+//                                cl::NDRange(global_work_size), cl::NullRange);
+
+//     // Retrieve data
+//     queue.enqueueReadBuffer(buffer_pixels, CL_TRUE, 0,
+//                             pixels.size() * sizeof(float), pixels.data());
+// }
+
+std::vector<float> ImageProcessor::apply_gamma_correction(
+    const std::vector<float>& pixels, float inv_gamma) const {
+    // Timer timer("apply_gamma_correction");
+
+    // Copy the original pixel data to not modify the input
+    std::vector<float> modified_pixels = pixels;
+
+    // Setup OpenCL environment, assuming 'context' and 'program' are
+    // member variables that have been previously initialized
+
     // Prepare buffers
     cl::Buffer buffer_pixels(context, CL_MEM_READ_WRITE,
-                             pixels.size() * sizeof(float));
+                             modified_pixels.size() * sizeof(float));
     cl::CommandQueue queue(context);
     queue.enqueueWriteBuffer(buffer_pixels, CL_TRUE, 0,
-                             pixels.size() * sizeof(float), pixels.data());
+                             modified_pixels.size() * sizeof(float),
+                             modified_pixels.data());
 
     // Set kernel arguments
     cl::Kernel kernel(program, "apply_gamma");
     kernel.setArg(0, buffer_pixels);
-    kernel.setArg(1, static_cast<unsigned int>(pixels.size()));
+    kernel.setArg(1, static_cast<unsigned int>(modified_pixels.size()));
     kernel.setArg(2, inv_gamma);
 
     // Execute kernel
-    size_t global_work_size = pixels.size();
+    size_t global_work_size = modified_pixels.size();
     queue.enqueueNDRangeKernel(kernel, cl::NullRange,
                                cl::NDRange(global_work_size), cl::NullRange);
 
     // Retrieve data
     queue.enqueueReadBuffer(buffer_pixels, CL_TRUE, 0,
-                            pixels.size() * sizeof(float), pixels.data());
+                            modified_pixels.size() * sizeof(float),
+                            modified_pixels.data());
+
+    // Return the modified pixel data
+    return modified_pixels;
 }
 
 bool reverse_compare(double a, double b) { return a > b; }

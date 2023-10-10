@@ -2,6 +2,15 @@ import sys
 import os
 import math
 
+# from pathlib import Path
+# current_file_path = Path(__file__).resolve()
+# current_dir = current_file_path.parent
+# relative_path = Path("../../cpp/kernels/gamma_correction.cl")
+# target_file_path = (current_dir / relative_path).resolve()
+# print(
+#     f"The absolute path to the kernel file is: {target_file_path}; Exists: {target_file_path.exists()} "
+# )
+
 # import numpy as np
 from PySide6.QtWidgets import (
     QApplication,
@@ -17,8 +26,15 @@ from PySide6.QtWidgets import (
 from PySide6.QtGui import QImage, QPixmap
 from PySide6.QtCore import Qt
 
-folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), "extensions")
-sys.path.append(folder)
+# folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), "extensions")
+# sys.path.append(folder)
+
+current_file_path = os.path.abspath(__file__)
+current_dir = os.path.dirname(current_file_path)
+extensions_folder = os.path.join(current_dir, "..", "extensions")
+extensions_folder = os.path.abspath(extensions_folder)
+print(f"Extensions_folder: {extensions_folder}")
+sys.path.append(extensions_folder)
 
 import hdr_viewer_cpp as hdr_viewer
 
@@ -69,14 +85,12 @@ class ImageViewer(QWidget):
     def update_gamma(self):
         gamma_value = self.slider.value() / 10.0
         self.gamma_label.setText(f"Gamma: {gamma_value:.1f}")
-        print(self.image_data[0])
         # processed_image_data = hdr_viewer.process_image(self.image_data, gamma_value)
         inv_gamma = 1.0 / gamma_value
         processed_image_data = self.image_processor.apply_gamma_correction(
             self.image_data, inv_gamma
         )
-        print(self.image_data[0])
-        self.display_image(self.image_data)
+        self.display_image(processed_image_data)
 
     def update_image(self):
         self.display_image(self.image_data)
