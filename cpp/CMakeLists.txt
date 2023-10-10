@@ -34,4 +34,5 @@ add_executable(Image_Processing src/main.cpp)
 target_link_libraries(Image_Processing PRIVATE image_processing_lib)
 
 add_library(hdr_viewer_cpp MODULE bindings/pybind.cpp)
+set_target_properties(hdr_viewer_cpp PROPERTIES SUFFIX ".pyd")
 target_link_libraries(hdr_viewer_cpp PRIVATE image_processing_lib pybind11::module)
