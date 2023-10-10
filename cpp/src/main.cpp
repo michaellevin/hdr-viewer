@@ -26,6 +26,7 @@ int main() {
 
     float gamma = 2.2f;
     // std::vector<float> processed_pixels = process_image(pixels, gamma);
+    // imageProcessor.apply_gamma_correction(pixels, 1.0f / gamma);
     std::vector<float> processed_pixels =
         imageProcessor.apply_gamma_correction(pixels, 1.0f / gamma);
     if (!write_image(target_path, processed_pixels, width, height, channels)) {

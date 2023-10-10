@@ -1,6 +1,7 @@
 import sys
 import os
 import math
+import numpy as np
 
 # from pathlib import Path
 # current_file_path = Path(__file__).resolve()
@@ -91,26 +92,26 @@ class ImageViewer(QWidget):
             self.image_data, inv_gamma
         )
         self.display_image(processed_image_data)
+        # self.image_processor.apply_gamma_correction(self.image_data, inv_gamma)
+        # self.display_image(self.image_data)
 
     def update_image(self):
         self.display_image(self.image_data)
 
     def display_image(self, img_data):
-        # print(img_data)
-        # np_img_data = np.array(img_data, dtype=np.float32).reshape(
-        #     (self.height, self.width, self.channels)
-        # )
-        # # Convert to 8-bit pixel values
-        # np_img_data = np.clip(np_img_data * 255, 0, 255).astype(np.uint8)
-        # height, width, channel = np_img_data.shape
-        # bytes_per_line = 3 * width
-        # q_img = QImage(
-        #     np_img_data.data, width, height, bytes_per_line, QImage.Format_RGB888
-        # )
+        # int_values = [min(255, max(0, int(x * 255))) for x in img_data]
+        # byte_array = bytes(int_values)
+        # # Create a QImage from the byte array.
+        # q_img = QImage(byte_array, self.width, self.height, QImage.Format_RGBA8888)
 
-        int_values = [min(255, max(0, int(x * 255))) for x in img_data]
-        byte_array = bytes(int_values)
-        # Create a QImage from the byte array.
+        # pixmap = QPixmap(q_img)
+        # self.scene.clear()
+        # self.scene.addPixmap(pixmap)
+        # self.view.fitInView(self.scene.sceneRect(), Qt.KeepAspectRatio)
+
+        img_data_np = np.array(img_data)
+        int_values = np.clip(img_data_np * 255, 0, 255).astype(np.uint8)
+        byte_array = bytes(int_values.tobytes())
         q_img = QImage(byte_array, self.width, self.height, QImage.Format_RGBA8888)
 
         pixmap = QPixmap(q_img)
