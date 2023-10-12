@@ -5,8 +5,20 @@
 #include <string>
 #include <vector>
 
-std::vector<float> scanline_image(const std::string& source_path, int& width,
-                                  int& height, int& channels, int new_width);
+struct DynamicRangeData {
+    float dynamic_range;
+    float stops;
+};
+
+struct ImageData {
+    std::vector<float> pixels;
+    DynamicRangeData dynamic_range_data;
+};
+
+DynamicRangeData find_dynamic_range(const std::vector<float>& pixels);
+
+ImageData scanline_image(const std::string& source_path, int& width,
+                         int& height, int& channels, int new_width);
 
 std::vector<float> process_image(std::vector<float>& pixels, float gamma);
 

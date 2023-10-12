@@ -212,8 +212,8 @@ std::vector<float> read_and_resize_image(const std::string& source_path,
     return resized_pixels;
 }
 
-std::vector<float> scanline_image(const std::string& source_path, int& width,
-                                  int& height, int& channels, int new_width) {
+ImageData scanline_image(const std::string& source_path, int& width,
+                         int& height, int& channels, int new_width) {
     Timer timer("scanline_image");
 
     auto in_file = OIIO::ImageInput::open(source_path);
@@ -253,12 +253,15 @@ std::vector<float> scanline_image(const std::string& source_path, int& width,
             }
         }
     } else {
-        std::cout << "Image is tiled! Cannot do anymore" << std::endl;
+        std::cout << "Image is tiled. Cannot do anymore" << std::endl;
     }
+
+    DynamicRangeData dynamicRangeData = find_dynamic_range(pixels);
+
     normalize_image(pixels);
     width = new_width;
     height = new_height;
-    return pixels;
+    return {pixels, dynamicRangeData};
 }
 
 std::vector<float> process_image(std::vector<float>& pixels, float gamma) {
@@ -267,6 +270,37 @@ std::vector<float> process_image(std::vector<float>& pixels, float gamma) {
     // float inv_gamma = 1.0f / gamma;
     // apply_gamma_correction(pixels, inv_gamma);
     return pixels;
+}
+
+DynamicRangeData find_dynamic_range(const std::vector<float>& pixels) {
+    // Timer timer("find_dynamic_range");
+
+    float max_pixel_value = FLT_MIN;  // Assume maximum pixel intensity in image
+    float min_pixel_value = FLT_MAX;  // Assume minimum non-zero pixel intensity
+                                      // in image
+
+    // Loop through all pixels
+    for (int i = 0; i < pixels.size(); i++) {
+        // Find the maximum pixel value
+        if (pixels[i] > max_pixel_value) {
+            max_pixel_value = pixels[i];
+        }
+
+        // Find the minimum non-zero pixel value
+        if (pixels[i] > 0.0f && pixels[i] < min_pixel_value) {
+            min_pixel_value = pixels[i];
+        }
+    }
+
+    // Calculate the dynamic range
+    float dynamic_range = max_pixel_value / min_pixel_value;
+
+    // Convert dynamic range to stops
+    float stops = log2(dynamic_range);
+
+    // Create and return the result struct
+    DynamicRangeData result = {dynamic_range, stops};
+    return result;
 }
 
 bool write_image(const std::string& target_path,
