@@ -80,7 +80,7 @@ class ImageViewer(QWidget):
         self.slider.setMaximum(80)  # Adjust as needed
         self.slider.setValue(22)
 
-        self.load_button.clicked.connect(self.open_imaage_dialog)
+        self.load_button.clicked.connect(self.open_image_dialog)
         self.slider.valueChanged.connect(self.update_gamma)
 
         self.image_processor = hdr_viewer.ImageProcessor()
@@ -105,7 +105,7 @@ class ImageViewer(QWidget):
             f"Image: {fname} - {self.width} x {self.height} x {self.channels} - Dynamic range: {dynamic_range}, stops: {stops}"
         )
 
-    def open_imaage_dialog(self):
+    def open_image_dialog(self):
         fname, _ = QFileDialog.getOpenFileName(
             self, "Open file", ".", "Image files (*.exr *.hdr)"
         )
