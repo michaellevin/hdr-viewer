@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
     QGraphicsView,
     QFileDialog,
     QVBoxLayout,
+    QHBoxLayout,
     QSlider,
     QLabel,
     QWidget,
@@ -57,36 +58,65 @@ class ImageViewer(QWidget):
     def __init__(self, image_path=None):
         super().__init__()
         self.image_path = image_path
+        self.image_data = None
+        self.width = 0
+        self.height = 0
+        self.channels = 0
+        self.image_processor = hdr_viewer.ImageProcessor()
         self.init_ui()
         if self.image_path:
             self.load_image(self.image_path)
 
     def init_ui(self):
+        self._setup_widgets()
+        self._setup_layout()
+        self._connect_signals()
+
+        self.setWindowTitle("HDR/EXR Image Viewer")
+        self.setGeometry(100, 100, 800, 600)
+
+    def _setup_widgets(self):
         self.scene = QGraphicsScene(self)
         self.view = QGraphicsView(self.scene)
-        self.gamma_slider = QSlider(Qt.Horizontal, self)
         self.load_button = QPushButton("Load Image", self)
-        self.gamma_label = QLabel("Gamma: 2.2", self)
         self.info_label = QLabel("", self)
+
+        # Gamma widgets
+        self.gamma_slider = QSlider(Qt.Horizontal, self)
+        self.gamma_slider.setMinimum(1)
+        self.gamma_slider.setMaximum(80)
+        self.gamma_slider.setValue(22)
+        self.gamma_label = QLabel(self)
+        self.update_gamma_label(2.2)
+
+        # Exposure widgets
+        self.exposure_slider = QSlider(Qt.Horizontal, self)
+        self.exposure_slider.setMinimum(1)
+        self.exposure_slider.setMaximum(80)
+        self.exposure_slider.setValue(22)
+        self.exposure_label = QLabel("Exposure: 2.2", self)
+
+    def _setup_layout(self):
+        gamma_layout = QHBoxLayout()
+        gamma_layout.addWidget(self.gamma_label)
+        gamma_layout.addWidget(self.gamma_slider)
+
+        exposure_layout = QHBoxLayout()
+        exposure_layout.addWidget(self.exposure_label)
+        exposure_layout.addWidget(self.exposure_slider)
 
         layout = QVBoxLayout(self)
         layout.addWidget(self.load_button)
         layout.addWidget(self.info_label)
-        layout.addWidget(self.gamma_label)
-        layout.addWidget(self.gamma_slider)
+        layout.addLayout(gamma_layout)
+        layout.addLayout(exposure_layout)
         layout.addWidget(self.view)
+        self.setLayout(layout)
 
-        self.gamma_slider.setMinimum(1)
-        self.gamma_slider.setMaximum(80)  # Adjust as needed
-        self.gamma_slider.setValue(22)
-
+    def _connect_signals(self):
         self.load_button.clicked.connect(self.open_image_dialog)
         self.gamma_slider.valueChanged.connect(self.update_gamma)
-
-        self.image_processor = hdr_viewer.ImageProcessor()
-
-        self.setWindowTitle("HDR/EXR Image Viewer")
-        self.setGeometry(100, 100, 800, 600)
+        self.exposure_slider.valueChanged.connect(self.update_exposure)
 
     def load_image(self, fname):
         (
@@ -96,14 +126,15 @@ class ImageViewer(QWidget):
             self.channels,
         ) = hdr_viewer.scanline_image(fname, 1024)
         self.update_image()
-
-        dynamic_range = self.image_data.dynamic_range_data.dynamic_range
-        stops = self.image_data.dynamic_range_data.stops
-        dynamic_range = format_dynamic_range(dynamic_range)
-        stops = format_stops(stops)
-        self.info_label.setText(
-            f"Image: {fname} - {self.width} x {self.height} x {self.channels} - Dynamic range: {dynamic_range}, stops: {stops}"
+        dynamic_range = format_dynamic_range(
+            self.image_data.dynamic_range_data.dynamic_range
         )
+        stops = format_stops(self.image_data.dynamic_range_data.stops)
+        self.info_label.setText(
+            f"Image: {fname} - {self.width} x {self.height} x {self.channels} "
+            f"- Dynamic range: {dynamic_range}, stops: {stops}"
+        )
+        self.update_gamma()
 
     def open_image_dialog(self):
         fname, _ = QFileDialog.getOpenFileName(
@@ -114,27 +145,23 @@ class ImageViewer(QWidget):
 
     def update_gamma(self):
         gamma_value = self.gamma_slider.value() / 10.0
-        self.gamma_label.setText(f"Gamma: {gamma_value:.1f}")
-        # processed_image_data = hdr_viewer.process_image(self.image_data, gamma_value)
+        self.update_gamma_label(gamma_value)
         inv_gamma = 1.0 / gamma_value
         processed_image_data = self.image_processor.apply_gamma_correction(
             self.image_data.pixels, inv_gamma
         )
         self.display_image(processed_image_data)
-        # self.image_processor.apply_gamma_correction(self.image_data, inv_gamma)
-        # self.display_image(self.image_data)
+
+    def update_gamma_label(self, gamma_value):
+        self.gamma_label.setText(f"Gamma: {gamma_value:.1f}")
+
+    def update_exposure(self):
+        exposure_value = self.exposure_slider.value() / 10.0
+        self.exposure_label.setText(f"Exposure: {exposure_value:.1f}")
+        # Add actual exposure changing logic here when ready
+        ...
 
     def display_image(self, img_data):
-        # int_values = [min(255, max(0, int(x * 255))) for x in img_data]
-        # byte_array = bytes(int_values)
-        # # Create a QImage from the byte array.
-        # q_img = QImage(byte_array, self.width, self.height, QImage.Format_RGBA8888)
-
-        # pixmap = QPixmap(q_img)
-        # self.scene.clear()
-        # self.scene.addPixmap(pixmap)
-        # self.view.fitInView(self.scene.sceneRect(), Qt.KeepAspectRatio)
-
         img_data_np = np.array(img_data)
         int_values = np.clip(img_data_np * 255, 0, 255).astype(np.uint8)
         byte_array = bytes(int_values.tobytes())
