@@ -64,7 +64,7 @@ class ImageViewer(QWidget):
     def init_ui(self):
         self.scene = QGraphicsScene(self)
         self.view = QGraphicsView(self.scene)
-        self.slider = QSlider(Qt.Horizontal, self)
+        self.gamma_slider = QSlider(Qt.Horizontal, self)
         self.load_button = QPushButton("Load Image", self)
         self.gamma_label = QLabel("Gamma: 2.2", self)
         self.info_label = QLabel("", self)
@@ -73,15 +73,15 @@ class ImageViewer(QWidget):
         layout.addWidget(self.load_button)
         layout.addWidget(self.info_label)
         layout.addWidget(self.gamma_label)
-        layout.addWidget(self.slider)
+        layout.addWidget(self.gamma_slider)
         layout.addWidget(self.view)
 
-        self.slider.setMinimum(1)
-        self.slider.setMaximum(80)  # Adjust as needed
-        self.slider.setValue(22)
+        self.gamma_slider.setMinimum(1)
+        self.gamma_slider.setMaximum(80)  # Adjust as needed
+        self.gamma_slider.setValue(22)
 
         self.load_button.clicked.connect(self.open_image_dialog)
-        self.slider.valueChanged.connect(self.update_gamma)
+        self.gamma_slider.valueChanged.connect(self.update_gamma)
 
         self.image_processor = hdr_viewer.ImageProcessor()
 
@@ -113,7 +113,7 @@ class ImageViewer(QWidget):
             self.load_image(fname)
 
     def update_gamma(self):
-        gamma_value = self.slider.value() / 10.0
+        gamma_value = self.gamma_slider.value() / 10.0
         self.gamma_label.setText(f"Gamma: {gamma_value:.1f}")
         # processed_image_data = hdr_viewer.process_image(self.image_data, gamma_value)
         inv_gamma = 1.0 / gamma_value
