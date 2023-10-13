@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 
+#include "image_io.h"
 #include "image_processing.h"
 
 std::string format_dynamic_range(float dynamic_range) {
@@ -71,11 +72,14 @@ int main() {
     DynamicRangeData hdr_info = image_data.dynamic_range_data;
     print_info(hdr_info.dynamic_range, hdr_info.stops);
 
-    float gamma = 2.5f;
+    float gamma = 2.2f;
+    float exposure = 1.0f;
     // std::vector<float> processed_pixels = process_image(pixels, gamma);
     // imageProcessor.apply_gamma_correction(pixels, 1.0f / gamma);
+    // std::vector<float> processed_pixels =
+    //     imageProcessor.apply_gamma_correction(pixels, 1.0f / gamma);
     std::vector<float> processed_pixels =
-        imageProcessor.apply_gamma_correction(pixels, 1.0f / gamma);
+        imageProcessor.apply_exposure_correction(pixels, exposure);
     if (!write_image(target_path, processed_pixels, width, height, channels)) {
         std::cerr << "Failed to write image" << std::endl;
         return 1;

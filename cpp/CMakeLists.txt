@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.8)
 # Project Information
 project(
     ImageProcessing 
-    VERSION 0.3.0 
+    VERSION 0.3.2 
     LANGUAGES CXX
 )
 
@@ -20,6 +20,7 @@ find_package(OpenCL REQUIRED)
 
 # file(GLOB SOURCES "src/*.cpp") # Specify the executable and its source files. Including all .cpp files in the src directory.
 set(SOURCES
+    src/image_io.cpp
     src/image_processing.cpp
     src/timer.cpp
     # Add other source files here

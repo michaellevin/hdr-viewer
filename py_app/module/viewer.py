@@ -83,18 +83,17 @@ class ImageViewer(QWidget):
 
         # Gamma widgets
         self.gamma_slider = QSlider(Qt.Horizontal, self)
-        self.gamma_slider.setMinimum(1)
-        self.gamma_slider.setMaximum(80)
+        self.gamma_slider.setMinimum(5)
+        self.gamma_slider.setMaximum(50)
         self.gamma_slider.setValue(22)
-        self.gamma_label = QLabel(self)
-        self.update_gamma_label(2.2)
+        self.gamma_label = QLabel("Gamma 2.2", self)
 
         # Exposure widgets
         self.exposure_slider = QSlider(Qt.Horizontal, self)
-        self.exposure_slider.setMinimum(1)
-        self.exposure_slider.setMaximum(80)
-        self.exposure_slider.setValue(22)
-        self.exposure_label = QLabel("Exposure: 2.2", self)
+        self.exposure_slider.setMinimum(-20)
+        self.exposure_slider.setMaximum(20)
+        self.exposure_slider.setValue(0)
+        self.exposure_label = QLabel("Exposure: 0", self)
 
     def _setup_layout(self):
         gamma_layout = QHBoxLayout()
@@ -145,21 +144,20 @@ class ImageViewer(QWidget):
 
     def update_gamma(self):
         gamma_value = self.gamma_slider.value() / 10.0
-        self.update_gamma_label(gamma_value)
+        self.gamma_label.setText(f"Gamma: {gamma_value:.1f}")
         inv_gamma = 1.0 / gamma_value
         processed_image_data = self.image_processor.apply_gamma_correction(
             self.image_data.pixels, inv_gamma
         )
         self.display_image(processed_image_data)
 
-    def update_gamma_label(self, gamma_value):
-        self.gamma_label.setText(f"Gamma: {gamma_value:.1f}")
-
     def update_exposure(self):
         exposure_value = self.exposure_slider.value() / 10.0
         self.exposure_label.setText(f"Exposure: {exposure_value:.1f}")
-        # Add actual exposure changing logic here when ready
-        ...
+        processed_image_data = self.image_processor.apply_exposure_correction(
+            self.image_data.pixels, exposure_value
+        )
+        self.display_image(processed_image_data)
 
     def display_image(self, img_data):
         img_data_np = np.array(img_data)
