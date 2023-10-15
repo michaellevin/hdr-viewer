@@ -157,6 +157,7 @@ ImageData scanline_image(const std::string& source_path, int& width,
     width = file_spec.width;
     height = file_spec.height;
     channels = file_spec.nchannels;
+    // TODO - make this dependent on the image extension: JPG, HDR, EXR => 3
     int desired_channels = 3;
     std::cout << "Original size " << width << "x" << height << ";" << std::endl;
 
