@@ -73,7 +73,7 @@ int main() {
     print_info(hdr_info.dynamic_range, hdr_info.stops);
 
     float gamma = 2.2f;
-    float exposure = 1.0f;
+    float exposure = 3.0f;
     // std::vector<float> processed_pixels = process_image(pixels, gamma);
     // imageProcessor.apply_gamma_correction(pixels, 1.0f / gamma);
     // std::vector<float> processed_pixels =

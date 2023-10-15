@@ -2,6 +2,8 @@
 #define CL_HPP_TARGET_OPENCL_VERSION 300
 #define CL_HPP_ENABLE_EXCEPTIONS 1
 #include <CL/opencl.hpp>
+#include <map>
+#include <string>
 
 class ImageProcessor {
    public:
@@ -17,5 +19,6 @@ class ImageProcessor {
 
    private:
     cl::Context context;
-    cl::Program program;
+    // cl::Program program;
+    std::map<std::string, cl::Program> programs;
 };
