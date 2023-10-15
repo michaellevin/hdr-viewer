@@ -18,7 +18,11 @@ void normalize_image(std::vector<float>& pixels) {
     std::vector<float> buffer;
     buffer.assign(pixels.begin(), pixels.end());
     std::sort(buffer.begin(), buffer.end(), reverse_compare);
-    float scale_factor = buffer[floor(0.01 * buffer.size())];
+    // float scale_factor = buffer[floor(0.01 * buffer.size())];
+    size_t index =
+        static_cast<size_t>(floor(0.01 * static_cast<double>(buffer.size())));
+    float scale_factor = buffer[index];
+
     for (int i = 0; i < pixels.size(); ++i) {
         pixels[i] = pixels[i] == 0 ? 0 : pixels[i] / scale_factor;
     }
