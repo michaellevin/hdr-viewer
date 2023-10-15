@@ -86,6 +86,7 @@ class ImageViewer(QWidget):
         self.gamma_slider.setMinimum(5)
         self.gamma_slider.setMaximum(50)
         self.gamma_slider.setValue(22)
+        self.inv_gamma = 1.0 / 2.2
         self.gamma_label = QLabel("Gamma 2.2", self)
 
         # Exposure widgets
@@ -93,6 +94,7 @@ class ImageViewer(QWidget):
         self.exposure_slider.setMinimum(-20)
         self.exposure_slider.setMaximum(20)
         self.exposure_slider.setValue(0)
+        self.exposure_value = 0.0
         self.exposure_label = QLabel("Exposure: 0", self)
 
     def _setup_layout(self):
@@ -124,7 +126,7 @@ class ImageViewer(QWidget):
             self.height,
             self.channels,
         ) = hdr_viewer.scanline_image(fname, 1024)
-        self.update_image()
+        # self.update_image()
         dynamic_range = format_dynamic_range(
             self.image_data.dynamic_range_data.dynamic_range
         )
@@ -133,7 +135,7 @@ class ImageViewer(QWidget):
             f"Image: {fname} - {self.width} x {self.height} x {self.channels} "
             f"- Dynamic range: {dynamic_range}, stops: {stops}"
         )
-        self.update_gamma()
+        self.compute_exposure_gamma(self.exposure_value, self.inv_gamma)
 
     def open_image_dialog(self):
         fname, _ = QFileDialog.getOpenFileName(
@@ -145,17 +147,17 @@ class ImageViewer(QWidget):
     def update_gamma(self):
         gamma_value = self.gamma_slider.value() / 10.0
         self.gamma_label.setText(f"Gamma: {gamma_value:.1f}")
-        inv_gamma = 1.0 / gamma_value
-        processed_image_data = self.image_processor.apply_gamma_correction(
-            self.image_data.pixels, inv_gamma
-        )
-        self.display_image(processed_image_data)
+        self.inv_gamma = 1.0 / gamma_value
+        self.compute_exposure_gamma(self.exposure_value, self.inv_gamma)
 
     def update_exposure(self):
-        exposure_value = self.exposure_slider.value() / 10.0
-        self.exposure_label.setText(f"Exposure: {exposure_value:.1f}")
-        processed_image_data = self.image_processor.apply_exposure_correction(
-            self.image_data.pixels, exposure_value
+        self.exposure_value = self.exposure_slider.value() / 10.0
+        self.exposure_label.setText(f"Exposure: {self.exposure_value:.1f}")
+        self.compute_exposure_gamma(self.exposure_value, self.inv_gamma)
+
+    def compute_exposure_gamma(self, *args):
+        processed_image_data = self.image_processor.apply_exposure_gamma_correction(
+            self.image_data.pixels, *args
         )
         self.display_image(processed_image_data)
 
@@ -163,7 +165,11 @@ class ImageViewer(QWidget):
         img_data_np = np.array(img_data)
         int_values = np.clip(img_data_np * 255, 0, 255).astype(np.uint8)
         byte_array = bytes(int_values.tobytes())
-        q_img = QImage(byte_array, self.width, self.height, QImage.Format_RGBA8888)
+        if self.channels == 4:
+            format = QImage.Format_RGBA8888
+        elif self.channels == 3:
+            format = QImage.Format_RGB888
+        q_img = QImage(byte_array, self.width, self.height, format)
 
         pixmap = QPixmap(q_img)
         self.scene.clear()

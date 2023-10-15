@@ -72,14 +72,18 @@ int main() {
     DynamicRangeData hdr_info = image_data.dynamic_range_data;
     print_info(hdr_info.dynamic_range, hdr_info.stops);
 
-    float gamma = 2.2f;
-    float exposure = 3.0f;
+    float gamma = 2.5f;
+    float inv_gamma = 1.0f / gamma;
+    float exposure = 1.0f;
     // std::vector<float> processed_pixels = process_image(pixels, gamma);
     // imageProcessor.apply_gamma_correction(pixels, 1.0f / gamma);
     // std::vector<float> processed_pixels =
     //     imageProcessor.apply_gamma_correction(pixels, 1.0f / gamma);
+    // std::vector<float> processed_pixels =
+    //     imageProcessor.apply_exposure_correction(pixels, exposure);
     std::vector<float> processed_pixels =
-        imageProcessor.apply_exposure_correction(pixels, exposure);
+        imageProcessor.apply_exposure_gamma_correction(pixels, exposure,
+                                                       inv_gamma);
     if (!write_image(target_path, processed_pixels, width, height, channels)) {
         std::cerr << "Failed to write image" << std::endl;
         return 1;

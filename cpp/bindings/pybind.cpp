@@ -27,7 +27,12 @@ PYBIND11_MODULE(hdr_viewer_cpp, m) {
         .def("apply_exposure_correction",
              &ImageProcessor::apply_exposure_correction,
              "A function to apply exposure correction to image pixels",
-             py::arg("pixels"), py::arg("exposure"));
+             py::arg("pixels"), py::arg("exposure"))
+        .def(
+            "apply_exposure_gamma_correction",
+            &ImageProcessor::apply_exposure_gamma_correction,
+            "A function to apply exposure and gamma correction to image pixels",
+            py::arg("pixels"), py::arg("exposure"), py::arg("inv_gamma"));
     m.def("scanline_image", [](const std::string& source_path, int new_width) {
         int width, height, channels;
         ImageData image_data =

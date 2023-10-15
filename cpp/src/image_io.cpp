@@ -157,11 +157,13 @@ ImageData scanline_image(const std::string& source_path, int& width,
     width = file_spec.width;
     height = file_spec.height;
     channels = file_spec.nchannels;
+    int desired_channels = 3;
     std::cout << "Original size " << width << "x" << height << ";" << std::endl;
 
     // calculate new height
     int new_height = static_cast<int>(float(height) / float(width) * new_width);
-    std::vector<float> pixels(new_width * new_height * channels);
+    // std::vector<float> pixels(new_width * new_height * channels);
+    std::vector<float> pixels(new_width * new_height * desired_channels);
     std::vector<float> scanline(width * channels);
 
     if (file_spec.tile_width == 0) {
@@ -177,11 +179,13 @@ ImageData scanline_image(const std::string& source_path, int& width,
                 int highres_line_pixel_index = static_cast<int>(
                     round(float(x) / float(new_width) * float(width)) *
                     channels);
-                for (int chnl = 0; chnl < channels; ++chnl) {
+                // for (int chnl = 0; chnl < channels; ++chnl) {
+                for (int chnl = 0; chnl < desired_channels; ++chnl) {
                     pixels[lowres_pixel_index + chnl] =
                         scanline[highres_line_pixel_index + chnl];
                 }
-                lowres_pixel_index += channels;
+                // lowres_pixel_index += channels;
+                lowres_pixel_index += desired_channels;
             }
         }
     } else {
@@ -193,6 +197,7 @@ ImageData scanline_image(const std::string& source_path, int& width,
     normalize_image(pixels);
     width = new_width;
     height = new_height;
+    channels = desired_channels;
     return {pixels, dynamicRangeData};
 }
 

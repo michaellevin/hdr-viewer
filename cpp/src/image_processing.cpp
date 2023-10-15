@@ -32,7 +32,8 @@ ImageProcessor::ImageProcessor() {
     // Load OpenCL source code
     std::vector<std::string> paths = {
         "C:/Cd/scripts/py/hdr-viewer/cpp/kernels/apply_gamma.cl",
-        "C:/Cd/scripts/py/hdr-viewer/cpp/kernels/apply_exposure.cl"};
+        "C:/Cd/scripts/py/hdr-viewer/cpp/kernels/apply_exposure.cl",
+        "C:/Cd/scripts/py/hdr-viewer/cpp/kernels/apply_exposure_gamma.cl"};
     cl::Program::Sources sources;
     for (const auto& path : paths) {
         std::ifstream sourceFile(path);
@@ -44,10 +45,10 @@ ImageProcessor::ImageProcessor() {
         std::string sourceCode(std::istreambuf_iterator<char>(sourceFile),
                                (std::istreambuf_iterator<char>()));
 
-        std::cout << "OpenCL Source Code from " << path << ":\n";
-        std::cout << "------------------------------------\n";
-        std::cout << sourceCode << "\n";
-        std::cout << "------------------------------------\n";
+        // std::cout << "OpenCL Source Code from " << path << ":\n";
+        // std::cout << "------------------------------------\n";
+        // std::cout << sourceCode << "\n";
+        // std::cout << "------------------------------------\n";
 
         cl::Program::Sources source;
         source.push_back({sourceCode.c_str(), sourceCode.length() + 1});
@@ -86,7 +87,7 @@ ImageProcessor::ImageProcessor() {
 
 std::vector<float> ImageProcessor::apply_kernel(
     const std::vector<float>& pixels, const std::string& kernel_name,
-    float parameter_value) const {
+    const std::vector<float>& parameters) const {
     Timer timer("apply_kernel: " + kernel_name);
 
     std::vector<float> modified_pixels = pixels;
@@ -107,6 +108,17 @@ std::vector<float> ImageProcessor::apply_kernel(
     // std::cout << "Parameter value: " << parameter_value << "\n";
 
     // Set kernel arguments
+    cl::Buffer buffer_params(context, CL_MEM_READ_ONLY,
+                             parameters.size() * sizeof(float));
+    err = queue.enqueueWriteBuffer(buffer_params, CL_TRUE, 0,
+                                   parameters.size() * sizeof(float),
+                                   parameters.data());
+    if (err != CL_SUCCESS) {
+        std::cerr << "Error in enqueueWriteBuffer for parameters: " << err
+                  << "\n";
+        exit(EXIT_FAILURE);
+    }
+
     cl::Program program;
     try {
         program = programs.at(kernel_name);
@@ -115,7 +127,7 @@ std::vector<float> ImageProcessor::apply_kernel(
     } catch (const std::out_of_range& e) {
         std::cerr << "Error: Program with key '" << kernel_name
                   << "' not found!\n";
-        // std::cerr << "Exception: " << e.what() << "\n";
+        std::cerr << "Exception: " << e.what() << "\n";
         // Possibly print all existing keys for debugging:
         std::cerr << "Existing keys: ";
         for (const auto& pair : programs) {
@@ -128,7 +140,8 @@ std::vector<float> ImageProcessor::apply_kernel(
     cl::Kernel kernel(program, kernel_name.c_str());
     kernel.setArg(0, buffer_pixels);
     kernel.setArg(1, static_cast<unsigned int>(modified_pixels.size()));
-    kernel.setArg(2, parameter_value);
+    kernel.setArg(2, buffer_params);
+    kernel.setArg(3, static_cast<unsigned int>(parameters.size()));
 
     // Execute kernel
     size_t global_work_size = modified_pixels.size();
@@ -152,10 +165,15 @@ std::vector<float> ImageProcessor::apply_kernel(
 
 std::vector<float> ImageProcessor::apply_gamma_correction(
     const std::vector<float>& pixels, float inv_gamma) const {
-    return apply_kernel(pixels, "apply_gamma", inv_gamma);
+    return apply_kernel(pixels, "apply_gamma", {inv_gamma});
 }
 
 std::vector<float> ImageProcessor::apply_exposure_correction(
     const std::vector<float>& pixels, float exposure) const {
-    return apply_kernel(pixels, "apply_exposure", exposure);
+    return apply_kernel(pixels, "apply_exposure", {exposure});
+}
+
+std::vector<float> ImageProcessor::apply_exposure_gamma_correction(
+    const std::vector<float>& pixels, float exposure, float inv_gamma) const {
+    return apply_kernel(pixels, "apply_exposure_gamma", {exposure, inv_gamma});
 }
