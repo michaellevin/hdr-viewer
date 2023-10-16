@@ -31,8 +31,8 @@ ImageProcessor::ImageProcessor() {
 
     // Load OpenCL source code
     std::vector<std::string> paths = {
-        "C:/Cd/scripts/py/hdr-viewer/cpp/kernels/apply_gamma.cl",
-        "C:/Cd/scripts/py/hdr-viewer/cpp/kernels/apply_exposure.cl",
+        // "C:/Cd/scripts/py/hdr-viewer/cpp/kernels/apply_gamma.cl",
+        // "C:/Cd/scripts/py/hdr-viewer/cpp/kernels/apply_exposure.cl",
         "C:/Cd/scripts/py/hdr-viewer/cpp/kernels/apply_exposure_gamma.cl"};
     cl::Program::Sources sources;
     for (const auto& path : paths) {
@@ -66,39 +66,20 @@ ImageProcessor::ImageProcessor() {
     }
 }
 
-// void ImageProcessor::apply_gamma_correction(std::vector<float>& pixels,
-//                                             float inv_gamma) {
-//     Timer timer("apply_gamma_correction");
-//     cl::Buffer buffer_pixels(context, CL_MEM_READ_WRITE,
-//                              pixels.size() * sizeof(float));
-//     cl::CommandQueue queue(context);
-//     queue.enqueueWriteBuffer(buffer_pixels, CL_TRUE, 0,
-//                              pixels.size() * sizeof(float), pixels.data());
-//     cl::Kernel kernel(program, "apply_gamma");
-//     kernel.setArg(0, buffer_pixels);
-//     kernel.setArg(1, static_cast<unsigned int>(pixels.size()));
-//     kernel.setArg(2, inv_gamma);
-//     size_t global_work_size = pixels.size();
-//     queue.enqueueNDRangeKernel(kernel, cl::NullRange,
-//                                cl::NDRange(global_work_size), cl::NullRange);
-//     queue.enqueueReadBuffer(buffer_pixels, CL_TRUE, 0,
-//                             pixels.size() * sizeof(float), pixels.data());
-// }
-
 std::vector<float> ImageProcessor::apply_kernel(
-    const std::vector<float>& pixels, const std::string& kernel_name,
+    std::vector<float>& pixels, const std::string& kernel_name,
     const std::vector<float>& parameters) const {
     Timer timer("apply_kernel: " + kernel_name);
 
-    std::vector<float> modified_pixels = pixels;
-
+    // std::vector<float> modified_pixels = pixels;
+    cl_int err;
     // Prepare buffers
+    size_t num_pixels = pixels.size();
     cl::Buffer buffer_pixels(context, CL_MEM_READ_WRITE,
-                             modified_pixels.size() * sizeof(float));
+                             num_pixels * sizeof(float));
     cl::CommandQueue queue(context);
-    cl_int err = queue.enqueueWriteBuffer(
-        buffer_pixels, CL_TRUE, 0, modified_pixels.size() * sizeof(float),
-        modified_pixels.data());
+    err = queue.enqueueWriteBuffer(buffer_pixels, CL_TRUE, 0,
+                                   num_pixels * sizeof(float), pixels.data());
     if (err != CL_SUCCESS) {
         std::cerr << "Error in enqueueWriteBuffer: " << err << "\n";
         exit(EXIT_FAILURE);
@@ -139,41 +120,41 @@ std::vector<float> ImageProcessor::apply_kernel(
 
     cl::Kernel kernel(program, kernel_name.c_str());
     kernel.setArg(0, buffer_pixels);
-    kernel.setArg(1, static_cast<unsigned int>(modified_pixels.size()));
+    kernel.setArg(1, static_cast<unsigned int>(num_pixels));
     kernel.setArg(2, buffer_params);
     kernel.setArg(3, static_cast<unsigned int>(parameters.size()));
 
     // Execute kernel
-    size_t global_work_size = modified_pixels.size();
-    err = queue.enqueueNDRangeKernel(
-        kernel, cl::NullRange, cl::NDRange(global_work_size), cl::NullRange);
+    // size_t global_work_size = modified_pixels.size();
+    err = queue.enqueueNDRangeKernel(kernel, cl::NullRange,
+                                     cl::NDRange(num_pixels), cl::NullRange);
     if (err != CL_SUCCESS) {
         std::cerr << "Error in enqueueNDRangeKernel: " << err << "\n";
         exit(EXIT_FAILURE);
     }
     // Retrieve data
     err = queue.enqueueReadBuffer(buffer_pixels, CL_TRUE, 0,
-                                  modified_pixels.size() * sizeof(float),
-                                  modified_pixels.data());
+                                  num_pixels * sizeof(float), pixels.data());
     if (err != CL_SUCCESS) {
         std::cerr << "Error in enqueueReadBuffer: " << err << "\n";
         exit(EXIT_FAILURE);
     }
     // Return the modified pixel data
-    return modified_pixels;
+    // return modified_pixels;
+    return pixels;
 }
 
 std::vector<float> ImageProcessor::apply_gamma_correction(
-    const std::vector<float>& pixels, float inv_gamma) const {
+    std::vector<float>& pixels, float inv_gamma) const {
     return apply_kernel(pixels, "apply_gamma", {inv_gamma});
 }
 
 std::vector<float> ImageProcessor::apply_exposure_correction(
-    const std::vector<float>& pixels, float exposure) const {
+    std::vector<float>& pixels, float exposure) const {
     return apply_kernel(pixels, "apply_exposure", {exposure});
 }
 
 std::vector<float> ImageProcessor::apply_exposure_gamma_correction(
-    const std::vector<float>& pixels, float exposure, float inv_gamma) const {
+    std::vector<float>& pixels, float exposure, float inv_gamma) const {
     return apply_kernel(pixels, "apply_exposure_gamma", {exposure, inv_gamma});
 }
