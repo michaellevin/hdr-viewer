@@ -31,9 +31,11 @@ ImageProcessor::ImageProcessor() {
 
     // Load OpenCL source code
     std::vector<std::string> paths = {
-        // "C:/Cd/scripts/py/hdr-viewer/cpp/kernels/apply_gamma.cl",
-        // "C:/Cd/scripts/py/hdr-viewer/cpp/kernels/apply_exposure.cl",
-        "C:/Cd/scripts/py/hdr-viewer/cpp/kernels/apply_exposure_gamma.cl"};
+        // "../../cpp/kernels/apply_gamma.cl",
+        // "../../cpp/kernels/apply_exposure.cl",
+        "../../cpp/kernels/apply_exposure_gamma.cl"};
+    std::filesystem::path currentPath = std::filesystem::current_path();
+    std::cout << "Current working directory: " << currentPath << std::endl;
     cl::Program::Sources sources;
     for (const auto& path : paths) {
         std::ifstream sourceFile(path);
