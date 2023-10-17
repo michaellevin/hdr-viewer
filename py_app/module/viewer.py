@@ -39,6 +39,8 @@ sys.path.append(extensions_folder)
 
 import hdr_viewer_cpp as hdr_viewer
 
+WIDTH = 1024
+
 
 def format_dynamic_range(dynamic_range):
     if dynamic_range >= 1e6:
@@ -57,10 +59,7 @@ class ImageViewer(QWidget):
     def __init__(self, image_path=None):
         super().__init__()
         self.image_path = image_path
-        self.image_data = None
-        self.width = 0
-        self.height = 0
-        self.channels = 0
+        self.original_image_data = None
         self.image_processor = hdr_viewer.ImageProcessor()
         self.init_ui()
         if self.image_path:
@@ -119,26 +118,28 @@ class ImageViewer(QWidget):
         self.exposure_slider.valueChanged.connect(self.update_exposure)
 
     def load_image(self, fname):
-        (
-            self.image_data,
-            self.width,
-            self.height,
-            self.channels,
-        ) = hdr_viewer.scanline_image(fname, 1024)
-        # self.update_image()
-        dynamic_range = format_dynamic_range(
-            self.image_data.dynamic_range_data.dynamic_range
-        )
-        stops = format_stops(self.image_data.dynamic_range_data.stops)
-        self.info_label.setText(
-            f"Image: {fname} - {self.width} x {self.height} x {self.channels} "
-            f"- Dynamic range: {dynamic_range}, stops: {stops}"
-        )
+        self.original_image_data = hdr_viewer.scanline_image(fname, WIDTH)
+
+        if self.original_image_data.hasDynamicRangeData():
+            dynamic_range = format_dynamic_range(
+                self.original_image_data.dynamic_range_data.dynamic_range
+            )
+            stops = format_stops(self.original_image_data.dynamic_range_data.stops)
+            orig_width = self.original_image_data.original_width
+            orig_height = self.original_image_data.original_height
+            self.info_label.setText(
+                f"Image: {fname} - {orig_width} x {orig_height}"
+                f"- Dynamic range: {dynamic_range}, stops: {stops} (HDR)"
+            )
+        else:
+            self.info_label.setText(
+                f"Image: {fname} - {orig_width} x {orig_height} (LDR) "
+            )
         self.compute_exposure_gamma(self.exposure_value, self.inv_gamma)
 
     def open_image_dialog(self):
         fname, _ = QFileDialog.getOpenFileName(
-            self, "Open file", ".", "Image files (*.exr *.hdr)"
+            self, "Open file", ".", "Image files (*.exr *.hdr *.jpg *.png *.tiff)"
         )
         if fname:
             self.load_image(fname)
@@ -156,7 +157,7 @@ class ImageViewer(QWidget):
 
     def compute_exposure_gamma(self, *args):
         processed_image_data = self.image_processor.apply_exposure_gamma_correction(
-            self.image_data.pixels, *args
+            self.original_image_data.pixels, *args
         )
         self.display_image(processed_image_data)
 
@@ -164,11 +165,16 @@ class ImageViewer(QWidget):
         img_data_np = np.array(img_data)
         int_values = np.clip(img_data_np * 255, 0, 255).astype(np.uint8)
         byte_array = bytes(int_values.tobytes())
-        if self.channels == 4:
-            format = QImage.Format_RGBA8888
-        elif self.channels == 3:
-            format = QImage.Format_RGB888
-        q_img = QImage(byte_array, self.width, self.height, format)
+        image_format = (
+            QImage.Format_RGBA8888
+            if self.original_image_data.output_has_alpha
+            else QImage.Format_RGB888
+        )
+        w, h = (
+            self.original_image_data.resized_width,
+            self.original_image_data.resized_height,
+        )
+        q_img = QImage(byte_array, w, h, image_format)
 
         pixmap = QPixmap(q_img)
         self.scene.clear()
@@ -176,7 +182,7 @@ class ImageViewer(QWidget):
         self.view.fitInView(self.scene.sceneRect(), Qt.KeepAspectRatio)
 
     def update_image(self):
-        self.display_image(self.image_data.pixels)
+        self.display_image(self.original_image_data.pixels)
 
 
 if __name__ == "__main__":
