@@ -4,11 +4,26 @@
 #include <OpenImageIO/imagebufalgo.h>
 #include <OpenImageIO/imageio.h>
 OIIO_NAMESPACE_USING
+#include <filesystem>
 #include <iostream>
 #include <string>
 #include <vector>
 
 #include "timer.h"
+
+bool isHDRImage(const std::string& source_path) {
+    // Retrieve the extension of the file from the file path.
+    std::string extension =
+        std::filesystem::path(source_path).extension().string();
+
+    // Convert the extension to lowercase to ensure the comparison is
+    // case-insensitive.
+    std::transform(extension.begin(), extension.end(), extension.begin(),
+                   [](unsigned char c) { return std::tolower(c); });
+
+    // Check if the extension corresponds to common HDR formats.
+    return (extension == ".hdr" || extension == ".exr");
+}
 
 bool reverse_compare(double a, double b) { return a > b; }
 
@@ -28,13 +43,13 @@ void normalize_image(std::vector<float>& pixels) {
     }
 }
 
-void apply_gamma(std::vector<float>& pixels, float gamma) {
-    // Timer timer("set_gamma");
-    float inv_gamma = 1.0f / gamma;
-    for (int i = 0; i < pixels.size(); ++i) {
-        pixels[i] = pow(pixels[i], inv_gamma);
-    }
-}
+// void apply_gamma(std::vector<float>& pixels, float gamma) {
+//     // Timer timer("set_gamma");
+//     float inv_gamma = 1.0f / gamma;
+//     for (int i = 0; i < pixels.size(); ++i) {
+//         pixels[i] = pow(pixels[i], inv_gamma);
+//     }
+// }
 
 DynamicRangeData find_dynamic_range(const std::vector<float>& pixels) {
     // Timer timer("find_dynamic_range");
@@ -144,72 +159,149 @@ std::vector<float> read_and_resize_image(const std::string& source_path,
     return resized_pixels;
 }
 
-ImageData scanline_image(const std::string& source_path, int& width,
-                         int& height, int& channels, int new_width) {
+ImageData scanline_image(const std::string& source_path, int new_width) {
     Timer timer("scanline_image");
 
+    // [01]. Reading file
     auto in_file = OIIO::ImageInput::open(source_path);
     if (!in_file) {
         std::cerr << "Source file is invalid or does not exist!" << std::endl;
         return {};
     }
     const OIIO::ImageSpec& file_spec = in_file->spec();
-    width = file_spec.width;
-    height = file_spec.height;
-    channels = file_spec.nchannels;
-    // TODO - make this dependent on the image extension: JPG, HDR, EXR => 3
-    int desired_channels = 3;
-    std::cout << "Original size " << width << "x" << height << ";" << std::endl;
+    int width = file_spec.width;
+    int height = file_spec.height;
+    int nchannels = file_spec.nchannels;
+    OIIO::TypeDesc image_format = file_spec.format;
+    std::cout << source_path << "\nSize " << width << "x" << height
+              << " / Num channels: " << nchannels
+              << " / Image format: " << image_format << std::endl;
 
-    // calculate new height
+    const std::vector<std::string>& channel_names = file_spec.channelnames;
+    bool hasAlpha = (std::find(channel_names.begin(), channel_names.end(),
+                               "A") != channel_names.end()) ||
+                    (std::find(channel_names.begin(), channel_names.end(),
+                               "Alpha") != channel_names.end());
+
+    bool nonWhiteAlphaFound = false;  // Flag to identify if we've encountered
+                                      // any non-white alpha value.
+    int alphaChannelIndex =
+        hasAlpha ? (nchannels - 1)
+                 : -1;  // Generally, the alpha channel is the last one.
+
+    // if nchannels in {3,4} => output_channels = nchannels
+    // nchannels could be 2: Y,A (luminance + alpha). => output_channels = 4
+    int output_nchannels = (nchannels == 3 || nchannels == 4) ? nchannels : 4;
+
+    // [02] Preparing arrays of pixels and scanline, calculate new height
     int new_height = static_cast<int>(float(height) / float(width) * new_width);
-    // std::vector<float> pixels(new_width * new_height * channels);
-    std::vector<float> pixels(new_width * new_height * desired_channels);
-    std::vector<float> scanline(width * channels);
+    std::vector<float> pixels(new_width * new_height * output_nchannels);
+    std::vector<float> scanline(width * nchannels);
 
-    if (file_spec.tile_width == 0) {
-        // reshaping
-        int lowres_pixel_index = 0;
-        for (int y = 0; y < new_height; ++y) {
-            // read highres scanline
-            int highres_line_index = static_cast<int>(
-                round(float(y) / float(new_height) * float(height)));
-            in_file->read_scanline(highres_line_index, 0, OIIO::TypeDesc::FLOAT,
-                                   &scanline[0]);
-            for (int x = 0; x < new_width; ++x) {
-                int highres_line_pixel_index = static_cast<int>(
-                    round(float(x) / float(new_width) * float(width)) *
-                    channels);
-                // for (int chnl = 0; chnl < channels; ++chnl) {
-                for (int chnl = 0; chnl < desired_channels; ++chnl) {
+    // [03] Reshaping pixels
+    int lowres_pixel_index = 0;
+    float alphaValue = 0.0f;
+    for (int y = 0; y < new_height; ++y) {
+        // read highres scanline
+        int highres_line_index = static_cast<int>(
+            round(float(y) / float(new_height) * float(height)));
+        in_file->read_scanline(highres_line_index, 0, OIIO::TypeDesc::FLOAT,
+                               &scanline[0]);
+        for (int x = 0; x < new_width; ++x) {
+            int highres_line_pixel_index = static_cast<int>(
+                round(float(x) / float(new_width) * float(width)) * nchannels);
+
+            if (nchannels == 2) {  // specific case for 2-channel images
+                // Copy the Y (luminance) and A (alpha) channels.
+                for (int chnl = 0; chnl < 3; ++chnl) {
+                    pixels[lowres_pixel_index + chnl] =
+                        scanline[highres_line_pixel_index];
+                }
+                alphaValue = scanline[highres_line_pixel_index +
+                                      alphaChannelIndex];  // A
+                pixels[lowres_pixel_index + 3] = alphaValue;
+                if (hasAlpha && !nonWhiteAlphaFound) {
+                    if (alphaValue < 1.0f) {
+                        nonWhiteAlphaFound = true;  // If any alpha value is not
+                                                    // white, set the flag true.
+                    }
+                }
+                lowres_pixel_index += 4;  // proceed by 2 channels
+            } else {
+                // Normal scenario: copy all channels.
+                for (int chnl = 0; chnl < output_nchannels; ++chnl) {
                     pixels[lowres_pixel_index + chnl] =
                         scanline[highres_line_pixel_index + chnl];
+                    if (hasAlpha && !nonWhiteAlphaFound) {
+                        if (chnl == alphaChannelIndex) {
+                            alphaValue =
+                                scanline[highres_line_pixel_index + chnl];
+                            if (alphaValue < 1.0f) {
+                                nonWhiteAlphaFound =
+                                    true;  // If any alpha value is not white,
+                                           // set the flag true.
+                            }
+                        }
+                    }
                 }
-                // lowres_pixel_index += channels;
-                lowres_pixel_index += desired_channels;
+                lowres_pixel_index += output_nchannels;
             }
         }
-    } else {
-        std::cout << "Image is tiled. Cannot do anymore" << std::endl;
     }
 
-    DynamicRangeData dynamicRangeData = find_dynamic_range(pixels);
+    // [04] Get rid of Alpha if it's not needed
+    bool outputHasAlpha = hasAlpha && nonWhiteAlphaFound;
+    if (hasAlpha && !nonWhiteAlphaFound) {
+        std::vector<float> compact_pixels;
+        // Reserves space for the new pixel array without the alpha channel.
+        // This helps in avoiding multiple reallocations.
+        compact_pixels.reserve((pixels.size() * 3) / 4);
 
-    normalize_image(pixels);
-    width = new_width;
-    height = new_height;
-    channels = desired_channels;
-    return {pixels, dynamicRangeData};
+        for (int i = 0; i < pixels.size(); i++) {
+            if ((i + 1) % 4 != 0) {
+                compact_pixels.push_back(pixels[i]);
+            }
+        }
+
+        pixels.swap(compact_pixels);
+        compact_pixels.clear();
+        output_nchannels -= 1;
+    }
+
+    // [05] Create ImageData struct
+    ImageData result;
+    result.pixels =
+        std::move(pixels);  // Move the pixel data into the result structure
+    result.original_width = width;
+    result.original_height = height;
+    result.num_original_channels = nchannels;
+    result.resized_width = new_width;
+    result.resized_height = new_height;
+    result.num_output_channels = output_nchannels;
+    result.original_has_alpha = hasAlpha;
+    result.output_has_alpha = outputHasAlpha;
+    // [05i] Normalize image if it's HDR/EXR
+    if (isHDRImage(source_path)) {
+        // It's important that 'dynamicRangeData' is created with 'new', as it
+        // is held by a unique_ptr
+        result.dynamic_range_data = std::make_unique<DynamicRangeData>(
+            find_dynamic_range(result.pixels));
+        normalize_image(result.pixels);
+    } else {
+        result.dynamic_range_data = nullptr;  // No dynamic range data
+    }
+    std::cout << "New size: " << new_width << "x" << new_height << ";"
+              << " output channels: " << result.num_output_channels
+              << std::endl;
+    return result;
 }
 
 // PROCESS IMAGE (REDUNDANT)
-std::vector<float> process_image(std::vector<float>& pixels, float gamma) {
-    Timer timer("apply gamma");
-    apply_gamma(pixels, gamma);
-    // float inv_gamma = 1.0f / gamma;
-    // apply_gamma_correction(pixels, inv_gamma);
-    return pixels;
-}
+// std::vector<float> process_image(std::vector<float>& pixels, float gamma) {
+//     Timer timer("apply gamma");
+//     apply_gamma(pixels, gamma);
+//     return pixels;
+// }
 
 // WRTIE IMAGE
 bool write_image(const std::string& target_path,
@@ -217,9 +309,16 @@ bool write_image(const std::string& target_path,
                  int channels) {
     Timer timer("write_image");
 
+    // Print the information to the console.
+    // int num_pixels = pixels.size() / channels;
+    // std::cout << "[WRITE] Number of pixels: " << num_pixels << std::endl;
+    // std::cout << "[WRITE] Width: " << width << std::endl;
+    // std::cout << "[WRITE] Height: " << height << std::endl;
+    // std::cout << "[WRITE] Channels: " << channels << std::endl;
+
     auto out_file = OIIO::ImageOutput::create(target_path);
     if (!out_file) {
-        std::cerr << "Cannot create output file!" << std::endl;
+        std::cerr << "Cannot create output file" << std::endl;
         return false;
     }
 
