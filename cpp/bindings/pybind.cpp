@@ -15,9 +15,23 @@ PYBIND11_MODULE(hdr_viewer_cpp, m) {
         .def_readwrite("stops", &DynamicRangeData::stops);
 
     py::class_<ImageData>(m, "ImageData")
-        .def(py::init<>())
+        .def(py::init<>())  // If you have a default constructor
         .def_readwrite("pixels", &ImageData::pixels)
-        .def_readwrite("dynamic_range_data", &ImageData::dynamic_range_data);
+        .def_readwrite("original_width", &ImageData::original_width)
+        .def_readwrite("original_height", &ImageData::original_height)
+        .def_readwrite("num_original_channels",
+                       &ImageData::num_original_channels)
+        .def_readwrite("resized_width", &ImageData::resized_width)
+        .def_readwrite("resized_height", &ImageData::resized_height)
+        .def_readwrite("num_output_channels", &ImageData::num_output_channels)
+        .def_readwrite("original_has_alpha", &ImageData::original_has_alpha)
+        .def_readwrite("output_has_alpha", &ImageData::output_has_alpha)
+        .def_property_readonly(
+            "dynamic_range_data",
+            [](const ImageData& self) -> const DynamicRangeData* {
+                return self.dynamic_range_data.get();
+            })
+        .def("hasDynamicRangeData", &ImageData::hasDynamicRangeData);
 
     py::class_<ImageProcessor>(m, "ImageProcessor")
         .def(py::init<>())  // Assuming there is a default constructor
@@ -34,10 +48,8 @@ PYBIND11_MODULE(hdr_viewer_cpp, m) {
             "A function to apply exposure and gamma correction to image pixels",
             py::arg("pixels"), py::arg("exposure"), py::arg("inv_gamma"));
     m.def("scanline_image", [](const std::string& source_path, int new_width) {
-        int width, height, channels;
-        ImageData image_data =
-            scanline_image(source_path, width, height, channels, new_width);
-        return pybind11::make_tuple(image_data, width, height, channels);
+        ImageData image_data = scanline_image(source_path, new_width);
+        return image_data;
     });
 
     // m.def("process_image", &process_image,
