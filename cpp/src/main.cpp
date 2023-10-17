@@ -1,4 +1,5 @@
-#include <cmath>    // for std::round
+#include <cmath>  // for std::round
+#include <filesystem>
 #include <iomanip>  // Include for std::setprecision
 #include <iostream>
 #include <sstream>  // Required for std::ostringstream
@@ -7,6 +8,10 @@
 
 #include "image_io.h"
 #include "image_processing.h"
+
+namespace fs = std::filesystem;
+int NEW_WIDTH = 1024;
+ImageProcessor imageProcessor;
 
 std::string format_dynamic_range(float dynamic_range) {
     std::ostringstream out;
@@ -49,47 +54,58 @@ void print_info(float dynamic_range, float stops) {
 }
 
 int main() {
-    std::string source_path = "examples/HDR_001.exr";
-    std::string target_path = "examples/HDR_001.jpg";
-    ImageProcessor imageProcessor;
-    int NEW_WIDTH = 1024;
-    int width, height, channels;
-    // * READ IMAGE
-    // std::vector<float> pixels = read_image(source_path, width, height,
-    // channels); // just read std::vector<float> pixels =
-    // read_and_resize_image(source_path, width, height, channels, NEW_WIDTH);
-    // // read & resize
-    ImageData image_data =
-        scanline_image(source_path, width, height, channels,
-                       NEW_WIDTH);  // scanline read & resize > Fastest
-    std::vector<float> pixels = image_data.pixels;
+    // Directory containing the image files
+    std::string directory_path = "examples";
 
-    if (pixels.empty()) {
-        std::cerr << "Failed to read image" << std::endl;
-        return 1;
+    // Check if the directory exists
+    if (!fs::exists(directory_path) || !fs::is_directory(directory_path)) {
+        std::cerr << "Directory does not exist: " << directory_path
+                  << std::endl;
+        return -1;
     }
 
-    DynamicRangeData hdr_info = image_data.dynamic_range_data;
-    print_info(hdr_info.dynamic_range, hdr_info.stops);
+    // Iterate over the files in the directory
+    for (const auto& entry : fs::directory_iterator(directory_path)) {
+        auto path = entry.path();
+        std::string filename = path.filename().string();
 
-    float gamma = 2.5f;
-    float inv_gamma = 1.0f / gamma;
-    float exposure = 1.0f;
-    // std::vector<float> processed_pixels = process_image(pixels, gamma);
-    // imageProcessor.apply_gamma_correction(pixels, 1.0f / gamma);
-    // std::vector<float> processed_pixels =
-    //     imageProcessor.apply_gamma_correction(pixels, 1.0f / gamma);
-    // std::vector<float> processed_pixels =
-    //     imageProcessor.apply_exposure_correction(pixels, exposure);
-    std::vector<float> processed_pixels =
-        imageProcessor.apply_exposure_gamma_correction(pixels, exposure,
-                                                       inv_gamma);
-    if (!write_image(target_path, processed_pixels, width, height, channels)) {
-        std::cerr << "Failed to write image" << std::endl;
-        return 1;
+        // Skip files with "_CORR" in their name
+        if (filename.find("_CORR") != std::string::npos) {
+            continue;
+        }
+
+        // Skip directories
+        if (fs::is_directory(path)) {
+            continue;
+        }
+
+        // Reading
+        ImageData image_data = scanline_image(path.string(), NEW_WIDTH);
+        if (image_data.pixels.empty()) {
+            std::cerr << "Failed to load image: " << path.string() << std::endl;
+            continue;  // Skip to the next file
+        }
+        if (image_data.hasDynamicRangeData()) {
+            DynamicRangeData* hdr_info = image_data.dynamic_range_data.get();
+            print_info(hdr_info->dynamic_range, hdr_info->stops);
+        }
+
+        // * PROCESS IMAGE
+        float gamma = 2.2f;
+        float inv_gamma = 1.0f / gamma;
+        float exposure = 0.2f;
+        std::vector<float> processed_pixels =
+            imageProcessor.apply_exposure_gamma_correction(image_data.pixels,
+                                                           exposure, inv_gamma);
+
+        // * WRITE IMAGE
+        std::string new_filename = path.stem().string() + "_CORR.png";
+        std::string target_path =
+            path.parent_path().string() + "/" + new_filename;
+        write_image(target_path, image_data.pixels, image_data.resized_width,
+                    image_data.resized_height, image_data.num_output_channels);
+        std::cout << " > Image written successfully to " << target_path
+                  << "\n-----------------" << std::endl;
     }
-
-    std::cout << " > Image written successfully to " << target_path
-              << std::endl;
     return 0;
 }
