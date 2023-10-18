@@ -4,12 +4,14 @@
 #include <OpenImageIO/imagebufalgo.h>
 #include <OpenImageIO/imageio.h>
 OIIO_NAMESPACE_USING
+#include <cfloat>  // This includes definitions for FLT_MIN and FLT_MAX
 #include <filesystem>
 #include <iostream>
 #include <string>
 #include <vector>
 
 #include "timer.h"
+
 
 bool isHDRImage(const std::string& source_path) {
     // Retrieve the extension of the file from the file path.
