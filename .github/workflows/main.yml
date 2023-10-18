@@ -42,6 +42,7 @@ jobs:
         sudo apt-get install -y libopenimageio-dev
         sudo apt-get install -y openimageio-tools libopenexr-dev libopencolorio-dev libopencv-contrib-dev
         sudo apt-get install -y pybind11-dev
+        sudo apt-get install -y opencl-headers ocl-icd-opencl-dev
 
     # MacOS
     - name: Install OpenImageIO (macOS)
@@ -62,7 +63,7 @@ jobs:
     - name: Install OpenImageIO via vcpkg (Windows)
       if: matrix.os == 'windows-latest'
       run: |
-        .\vcpkg\vcpkg install openimageio:x64-windows pybind11:x64-windows
+        .\vcpkg\vcpkg install openimageio:x64-windows pybind11:x64-windows opencl:x64-windows
        
     - name: Create Build Environment
       run: cmake -E make_directory ${{github.workspace}}/build
