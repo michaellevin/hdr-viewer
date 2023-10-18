@@ -111,7 +111,7 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         # Artifact name
-        name: hdr_viewer_py39_${{ matrix.os }}
+        name: hdr-viewer-py39-${{ runner.os }}
         # Directory containing the build artifacts
         path: |
             ${{github.workspace}}/build/Release/*
