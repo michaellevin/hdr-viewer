@@ -50,6 +50,7 @@ jobs:
       run: |
         brew install openimageio
         brew install pybind11
+        brew install opencl-headers
 
     # Windows: setup vcpkg and install OpenImageIO
     - name: Install vcpkg (Windows)
