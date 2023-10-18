@@ -12,7 +12,6 @@ OIIO_NAMESPACE_USING
 
 #include "timer.h"
 
-
 bool isHDRImage(const std::string& source_path) {
     // Retrieve the extension of the file from the file path.
     std::string extension =
@@ -85,81 +84,83 @@ DynamicRangeData find_dynamic_range(const std::vector<float>& pixels) {
 }
 
 // READ IMAGE FUNCTIONS
-std::vector<float> read_image(const std::string& source_path, int& width,
-                              int& height, int& channels) {
-    Timer timer("read_image");
+// std::vector<float> read_image(const std::string& source_path, int& width,
+//                               int& height, int& channels) {
+//     Timer timer("read_image");
 
-    auto in_file = OIIO::ImageInput::open(source_path);
-    if (!in_file) {
-        std::cerr << "Source file is invalid or does not exist!" << std::endl;
-        // Handle the error appropriately, e.g., by returning an empty vector
-        return {};
-    }
+//     auto in_file = OIIO::ImageInput::open(source_path);
+//     if (!in_file) {
+//         std::cerr << "Source file is invalid or does not exist!" <<
+//         std::endl;
+//         // Handle the error appropriately, e.g., by returning an empty vector
+//         return {};
+//     }
 
-    const OIIO::ImageSpec& file_spec = in_file->spec();
-    width = file_spec.width;
-    height = file_spec.height;
-    channels = file_spec.nchannels;
+//     const OIIO::ImageSpec& file_spec = in_file->spec();
+//     width = file_spec.width;
+//     height = file_spec.height;
+//     channels = file_spec.nchannels;
 
-    std::vector<float> pixels(width * height * channels);
-    in_file->read_image(OIIO::TypeDesc::FLOAT, pixels.data());
+//     std::vector<float> pixels(width * height * channels);
+//     in_file->read_image(OIIO::TypeDesc::FLOAT, pixels.data());
 
-    in_file->close();
+//     in_file->close();
 
-    return pixels;
-}
+//     return pixels;
+// }
 
-std::vector<float> read_and_resize_image(const std::string& source_path,
-                                         int& width, int& height, int& channels,
-                                         int new_width) {
-    Timer timer("read_and_resize_image");
+// std::vector<float> read_and_resize_image(const std::string& source_path,
+//                                          int& width, int& height, int&
+//                                          channels, int new_width) {
+//     Timer timer("read_and_resize_image");
 
-    auto in_file = ImageInput::open(source_path);
-    if (!in_file) {
-        std::cerr << "Source file is invalid or does not exist!" << std::endl;
-        return {};
-    }
+//     auto in_file = ImageInput::open(source_path);
+//     if (!in_file) {
+//         std::cerr << "Source file is invalid or does not exist!" <<
+//         std::endl; return {};
+//     }
 
-    const ImageSpec& file_spec = in_file->spec();
-    width = file_spec.width;
-    height = file_spec.height;
-    channels = file_spec.nchannels;
-    std::cout << "Original size: " << width << "x" << height << ";"
-              << std::endl;
+//     const ImageSpec& file_spec = in_file->spec();
+//     width = file_spec.width;
+//     height = file_spec.height;
+//     channels = file_spec.nchannels;
+//     std::cout << "Original size: " << width << "x" << height << ";"
+//               << std::endl;
 
-    std::vector<float> pixels(width * height * channels);
-    in_file->read_image(TypeDesc::FLOAT, pixels.data());
-    in_file->close();
+//     std::vector<float> pixels(width * height * channels);
+//     in_file->read_image(TypeDesc::FLOAT, pixels.data());
+//     in_file->close();
 
-    // Resize logic
-    int new_height = static_cast<int>(
-        height * (static_cast<float>(new_width) / static_cast<float>(width)));
+//     // Resize logic
+//     int new_height = static_cast<int>(
+//         height * (static_cast<float>(new_width) /
+//         static_cast<float>(width)));
 
-    // Create an ImageBuf from the original pixel data
-    ImageSpec orig_spec(width, height, channels, TypeDesc::FLOAT);
-    ImageBuf original_buf(orig_spec, pixels.data());
+//     // Create an ImageBuf from the original pixel data
+//     ImageSpec orig_spec(width, height, channels, TypeDesc::FLOAT);
+//     ImageBuf original_buf(orig_spec, pixels.data());
 
-    // Create a buffer for the resized image
-    ImageSpec new_spec(new_width, new_height, channels, TypeDesc::FLOAT);
-    ImageBuf resized_buf(new_spec);
+//     // Create a buffer for the resized image
+//     ImageSpec new_spec(new_width, new_height, channels, TypeDesc::FLOAT);
+//     ImageBuf resized_buf(new_spec);
 
-    // Resize the image
-    ImageBufAlgo::resize(resized_buf, original_buf);
+//     // Resize the image
+//     ImageBufAlgo::resize(resized_buf, original_buf);
 
-    // Update width and height for the caller
-    width = new_width;
-    height = new_height;
+//     // Update width and height for the caller
+//     width = new_width;
+//     height = new_height;
 
-    // Extract and return the pixel data from the resized buffer
-    std::vector<float> resized_pixels(new_width * new_height * channels);
-    resized_buf.get_pixels(resized_buf.roi(), TypeDesc::FLOAT,
-                           resized_pixels.data());
+//     // Extract and return the pixel data from the resized buffer
+//     std::vector<float> resized_pixels(new_width * new_height * channels);
+//     resized_buf.get_pixels(resized_buf.roi(), TypeDesc::FLOAT,
+//                            resized_pixels.data());
 
-    // Normalizing
-    normalize_image(resized_pixels);
+//     // Normalizing
+//     normalize_image(resized_pixels);
 
-    return resized_pixels;
-}
+//     return resized_pixels;
+// }
 
 ImageData scanline_image(const std::string& source_path, int new_width) {
     Timer timer("scanline_image");
