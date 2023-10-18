@@ -12,6 +12,10 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Set vcpkg toolchain file > moved to .vscode/settings.json
 # set(CMAKE_TOOLCHAIN_FILE "[vcpkg root]/scripts/buildsystems/vcpkg.cmake" CACHE STRING "")
+if(UNIX)
+    set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+endif()
+set(CMAKE_VERBOSE_MAKEFILE ON) # Print verbose makefile commands
 
 # Find the packages
 find_package(OpenImageIO CONFIG REQUIRED)
@@ -35,5 +39,10 @@ add_executable(Image_Processing src/main.cpp)
 target_link_libraries(Image_Processing PRIVATE image_processing_lib)
 
 add_library(hdr_viewer_cpp MODULE bindings/pybind.cpp)
-set_target_properties(hdr_viewer_cpp PROPERTIES SUFFIX ".pyd")
+if(WIN32)
+    set_target_properties(hdr_viewer_cpp PROPERTIES SUFFIX ".pyd")
+else()
+    # The default suffix for MODULE libraries in CMake is .so, which is correct for Python extensions on Unix
+    # No need to explicitly set it unless you need a non-standard suffix or additional behavior
+endif()
 target_link_libraries(hdr_viewer_cpp PRIVATE image_processing_lib pybind11::module)
