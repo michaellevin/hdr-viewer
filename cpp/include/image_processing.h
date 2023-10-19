@@ -1,5 +1,10 @@
 #pragma once
+#ifdef USE_OPENCL_120
+#define CL_HPP_MINIMUM_OPENCL_VERSION 120
+#define CL_HPP_TARGET_OPENCL_VERSION 120
+#else
 #define CL_HPP_TARGET_OPENCL_VERSION 300
+#endif
 #define CL_HPP_ENABLE_EXCEPTIONS 1
 #include <CL/opencl.hpp>
 #include <map>

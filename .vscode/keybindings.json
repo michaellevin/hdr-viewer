@@ -1,0 +1,10 @@
+[
+    {
+        "key": "ctrl+shift+1",
+        "command": "settings.cycle.cmakeWindowsConfiguration"
+    },
+    {
+        "key": "ctrl+shift+2",
+        "command": "settings.cycle.cmakeUnixConfiguration"
+    }
+]

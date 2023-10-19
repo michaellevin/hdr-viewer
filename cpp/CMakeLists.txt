@@ -31,8 +31,27 @@ set(SOURCES
 )
 add_library(image_processing_lib STATIC ${SOURCES})
 target_include_directories(image_processing_lib PUBLIC include)
-message(STATUS "OpenCL include directories: ${OpenCL_INCLUDE_DIRS}")
-target_include_directories(image_processing_lib PUBLIC ${OpenCL_INCLUDE_DIRS})
+if(APPLE)
+    add_compile_definitions(USE_OPENCL_120)
+    # Mac: find the base directory containing 'CL/opencl.hpp'
+    find_path(OpenCL_INCLUDE_DIR
+        NAMES CL/opencl.hpp  
+    )
+    get_filename_component(OpenCL_INCLUDE_DIR ${OpenCL_INCLUDE_DIR} DIRECTORY) # get Parent folder
+    if(NOT OpenCL_INCLUDE_DIR)
+        message(FATAL_ERROR "OpenCL include path not found!")
+    endif()
+    message(STATUS "[mac] OpenCL include directory: ${OpenCL_INCLUDE_DIR}")
+    # Include the directory and ensure it's used for this target
+    target_include_directories(image_processing_lib SYSTEM PUBLIC ${OpenCL_INCLUDE_DIR})
+else()
+    # Win/Linux
+    message(STATUS "[win/linux] OpenCL include directories: ${OpenCL_INCLUDE_DIRS}")
+    target_include_directories(image_processing_lib PUBLIC ${OpenCL_INCLUDE_DIRS})
+endif()
+
+
+# target_include_directories(image_processing_lib PUBLIC ${OpenCL_INCLUDE_DIRS})
 target_link_libraries(image_processing_lib PRIVATE OpenImageIO::OpenImageIO ${OpenCL_LIBRARIES})  # Link against OpenCL
 
 add_executable(Image_Processing src/main.cpp)
@@ -42,7 +61,6 @@ add_library(hdr_viewer_cpp MODULE bindings/pybind.cpp)
 if(WIN32)
     set_target_properties(hdr_viewer_cpp PROPERTIES SUFFIX ".pyd")
 else()
-    # The default suffix for MODULE libraries in CMake is .so, which is correct for Python extensions on Unix
-    # No need to explicitly set it unless you need a non-standard suffix or additional behavior
+    # The default suffix for MODULE libraries in CMake is .so
 endif()
 target_link_libraries(hdr_viewer_cpp PRIVATE image_processing_lib pybind11::module)
