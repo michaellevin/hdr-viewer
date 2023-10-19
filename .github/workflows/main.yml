@@ -51,10 +51,11 @@ jobs:
         brew install openimageio
         brew install pybind11
         brew install opencl-headers
+        brew install opencl-clhpp-headers
     
-    - name: Set CPPFLAGS for OpenCL headers
-      if: matrix.os == 'macos-latest'
-      run: echo "CPPFLAGS=-I/usr/local/opt/opencl-headers/include" >> $GITHUB_ENV
+    # - name: Set CPPFLAGS for OpenCL headers
+    #   if: matrix.os == 'macos-latest'
+    #   run: echo "CPPFLAGS=-I/usr/local/opt/opencl-headers/include" >> $GITHUB_ENV
 
     # Windows: setup vcpkg and install OpenImageIO
     - name: Install vcpkg (Windows)
