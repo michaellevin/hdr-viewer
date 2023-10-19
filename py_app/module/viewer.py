@@ -1,16 +1,13 @@
 import sys
 import os
 import numpy as np
+import platform
+import logging
 
-# from pathlib import Path
-# current_file_path = Path(__file__).resolve()
-# current_dir = current_file_path.parent
-# relative_path = Path("../../cpp/kernels/gamma_correction.cl")
-# target_file_path = (current_dir / relative_path).resolve()
-# print(
-#     f"The absolute path to the kernel file is: {target_file_path}; Exists: {target_file_path.exists()} "
-# )
-
+logging.basicConfig(
+    level=logging.DEBUG,  # Will capture all levels, DEBUG and above
+    format="%(levelname)s - %(message)s",
+)
 # import numpy as np
 from PySide6.QtWidgets import (
     QApplication,
@@ -27,15 +24,20 @@ from PySide6.QtWidgets import (
 from PySide6.QtGui import QImage, QPixmap
 from PySide6.QtCore import Qt
 
-# folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), "extensions")
-# sys.path.append(folder)
-
+major = sys.version_info.major
+minor = sys.version_info.minor
 current_file_path = os.path.abspath(__file__)
 current_dir = os.path.dirname(current_file_path)
 extensions_folder = os.path.join(current_dir, "..", "extensions")
 extensions_folder = os.path.abspath(extensions_folder)
-print(f"Extensions_folder: {extensions_folder}")
-sys.path.append(extensions_folder)
+cur_extension_folder = os.path.join(
+    extensions_folder, f"py{major}{minor}-{platform.system().lower()}"
+)
+if not os.path.exists(cur_extension_folder):
+    logging.critical(f"Extension folder not found: {cur_extension_folder}")
+else:
+    logging.info(f"Extensions_folder: {cur_extension_folder} EXISTS")
+    sys.path.append(cur_extension_folder)
 
 import hdr_viewer_cpp as hdr_viewer
 
