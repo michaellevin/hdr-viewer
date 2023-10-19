@@ -14,57 +14,81 @@
 #include "timer.h"
 
 ImageProcessor::ImageProcessor() {
-    // Set GPU Context
-    context = cl::Context(CL_DEVICE_TYPE_GPU);
-    std::vector<cl::Device> devices = context.getInfo<CL_CONTEXT_DEVICES>();
-    // Print device details
-    for (const auto& device : devices) {
-        std::string deviceName = device.getInfo<CL_DEVICE_NAME>();
-        std::string deviceVendor = device.getInfo<CL_DEVICE_VENDOR>();
-        cl_uint deviceComputeUnits =
-            device.getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>();
+    try {
+        // Set GPU Context
+        context = cl::Context(CL_DEVICE_TYPE_GPU);
+        std::vector<cl::Device> devices = context.getInfo<CL_CONTEXT_DEVICES>();
+        // Print device details
+        for (const auto& device : devices) {
+            std::string deviceName = device.getInfo<CL_DEVICE_NAME>();
+            std::string deviceVendor = device.getInfo<CL_DEVICE_VENDOR>();
+            cl_uint deviceComputeUnits =
+                device.getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>();
 
-        std::cout << "Device Name: " << deviceName << "\n";
-        std::cout << "Device Vendor: " << deviceVendor << "\n";
-        std::cout << "Device Max Compute Units: " << deviceComputeUnits << "\n";
-    }
-
-    // Load OpenCL source code
-    std::vector<std::string> paths = {
-        // "../../cpp/kernels/apply_gamma.cl",
-        // "../../cpp/kernels/apply_exposure.cl",
-        "../../cpp/kernels/apply_exposure_gamma.cl"};
-    std::filesystem::path currentPath = std::filesystem::current_path();
-    std::cout << "Current working directory: " << currentPath << std::endl;
-    cl::Program::Sources sources;
-    for (const auto& path : paths) {
-        std::ifstream sourceFile(path);
-        if (!sourceFile.is_open()) {
-            std::cerr << "Error opening OpenCL source file at " << path
-                      << std::endl;
-            exit(EXIT_FAILURE);
+            std::cout << "Device Name: " << deviceName << "\n";
+            std::cout << "Device Vendor: " << deviceVendor << "\n";
+            std::cout << "Device Max Compute Units: " << deviceComputeUnits
+                      << "\n";
         }
-        std::string sourceCode(std::istreambuf_iterator<char>(sourceFile),
-                               (std::istreambuf_iterator<char>()));
 
-        // std::cout << "OpenCL Source Code from " << path << ":\n";
-        // std::cout << "------------------------------------\n";
-        // std::cout << sourceCode << "\n";
-        // std::cout << "------------------------------------\n";
+        // Load OpenCL source code
+        // TODO: REPLACE WITH IN-LINE CODE
+        std::vector<std::string> paths = {
+            // "../../cpp/kernels/apply_gamma.cl",
+            // "../../cpp/kernels/apply_exposure.cl",
+            "../../cpp/kernels/apply_exposure_gamma.cl"};
+        std::filesystem::path currentPath = std::filesystem::current_path();
+        std::cout << "Current working directory: " << currentPath << std::endl;
+        cl::Program::Sources sources;
+        for (const auto& path : paths) {
+            std::ifstream sourceFile(path);
+            if (!sourceFile.is_open()) {
+                // std::cerr << "Error opening OpenCL source file at " << path
+                //           << std::endl;
+                // exit(EXIT_FAILURE);
+                throw std::runtime_error(
+                    "Error opening OpenCL source file at " + path);
+            }
+            std::string sourceCode(std::istreambuf_iterator<char>(sourceFile),
+                                   (std::istreambuf_iterator<char>()));
 
-        cl::Program::Sources source;
-        source.push_back({sourceCode.c_str(), sourceCode.length() + 1});
+            // std::cout << "OpenCL Source Code from " << path << ":\n";
+            // std::cout << "------------------------------------\n";
+            // std::cout << sourceCode << "\n";
+            // std::cout << "------------------------------------\n";
 
-        cl::Program program(context, source);
-        if (program.build(devices) != CL_SUCCESS) {
-            std::cerr << "OpenCL build error: "
-                      << program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(devices[0])
-                      << std::endl;
-            exit(EXIT_FAILURE);
+            cl::Program::Sources source;
+            source.push_back({sourceCode.c_str(), sourceCode.length() + 1});
+
+            cl::Program program(context, source);
+            if (program.build(devices) != CL_SUCCESS) {
+                std::cerr << "OpenCL build error: "
+                          << program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(
+                                 devices[0])
+                          << std::endl;
+                // exit(EXIT_FAILURE);
+                throw std::runtime_error(
+                    "OpenCL build error: " +
+                    program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(devices[0]));
+            }
+            std::filesystem::path fs_path(path);
+            std::string key = fs_path.stem().string();
+            programs[key] = program;
         }
-        std::filesystem::path fs_path(path);
-        std::string key = fs_path.stem().string();
-        programs[key] = program;
+    } catch (const cl::Error& e) {
+        // Handle OpenCL exceptions
+        std::cerr << "Exception in ImageProcessor: " << e.what() << " : "
+                  << e.err() << std::endl;
+        throw;  // rethrow to propagate the error
+    } catch (const std::exception& e) {
+        // Handle standard exceptions
+        std::cerr << "Exception in ImageProcessor: " << e.what() << std::endl;
+        throw;  // rethrow to propagate the error
+    } catch (...) {
+        // Handle all other types of exceptions
+        std::cerr << "An unknown exception occurred in ImageProcessor"
+                  << std::endl;
+        throw;  // rethrow to propagate the error
     }
 }
 
@@ -83,8 +107,10 @@ std::vector<float> ImageProcessor::apply_kernel(
     err = queue.enqueueWriteBuffer(buffer_pixels, CL_TRUE, 0,
                                    num_pixels * sizeof(float), pixels.data());
     if (err != CL_SUCCESS) {
-        std::cerr << "Error in enqueueWriteBuffer: " << err << "\n";
-        exit(EXIT_FAILURE);
+        // std::cerr << "Error in enqueueWriteBuffer: " << err << "\n";
+        // exit(EXIT_FAILURE);
+        throw std::runtime_error("Error in enqueueWriteBuffer: " +
+                                 std::to_string(err));
     }
 
     // std::cout << "Applying kernel: " << kernel_name << "\n";
@@ -97,9 +123,11 @@ std::vector<float> ImageProcessor::apply_kernel(
                                    parameters.size() * sizeof(float),
                                    parameters.data());
     if (err != CL_SUCCESS) {
-        std::cerr << "Error in enqueueWriteBuffer for parameters: " << err
-                  << "\n";
-        exit(EXIT_FAILURE);
+        // std::cerr << "Error in enqueueWriteBuffer for parameters: " << err
+        //           << "\n";
+        // exit(EXIT_FAILURE);
+        throw std::runtime_error("Error in enqueueWriteBuffer: " +
+                                 std::to_string(err));
     }
 
     cl::Program program;
@@ -117,7 +145,8 @@ std::vector<float> ImageProcessor::apply_kernel(
             std::cerr << pair.first << " ";
         }
         std::cerr << "\n";
-        exit(EXIT_FAILURE);  // Or handle error appropriately
+        // exit(EXIT_FAILURE);
+        throw std::runtime_error(e.what());
     }
 
     cl::Kernel kernel(program, kernel_name.c_str());
@@ -138,8 +167,10 @@ std::vector<float> ImageProcessor::apply_kernel(
     err = queue.enqueueReadBuffer(buffer_pixels, CL_TRUE, 0,
                                   num_pixels * sizeof(float), pixels.data());
     if (err != CL_SUCCESS) {
-        std::cerr << "Error in enqueueReadBuffer: " << err << "\n";
-        exit(EXIT_FAILURE);
+        // std::cerr << "Error in enqueueReadBuffer: " << err << "\n";
+        // exit(EXIT_FAILURE);
+        throw std::runtime_error("Error in enqueueReadBuffer: " +
+                                 std::to_string(err));
     }
     // Return the modified pixel data
     // return modified_pixels;

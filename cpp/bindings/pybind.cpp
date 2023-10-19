@@ -9,6 +9,9 @@ namespace py = pybind11;
 PYBIND11_MODULE(hdr_viewer_cpp, m) {
     m.doc() = "Python bindings for hdr-viewer";
 
+    pybind11::register_exception<std::runtime_error>(m, "RuntimeException");
+    pybind11::register_exception<cl::Error>(m, "OpenCLException");
+
     py::class_<DynamicRangeData>(m, "DynamicRangeData")
         .def(py::init<>())
         .def_readwrite("dynamic_range", &DynamicRangeData::dynamic_range)
