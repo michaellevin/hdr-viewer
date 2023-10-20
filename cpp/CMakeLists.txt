@@ -37,10 +37,18 @@ if(APPLE)
     find_path(OpenCL_INCLUDE_DIR
         NAMES CL/opencl.hpp  
     )
-    get_filename_component(OpenCL_INCLUDE_DIR ${OpenCL_INCLUDE_DIR} DIRECTORY) # get Parent folder
     if(NOT OpenCL_INCLUDE_DIR)
         message(FATAL_ERROR "OpenCL include path not found!")
     endif()
+    function(list_files_recursive directory)
+        message(STATUS "Listing files recursively in directory: ${directory}")
+        file(GLOB_RECURSE all_files RELATIVE "${directory}" "${directory}/*")
+        foreach(file_path ${all_files})
+            message(STATUS "${file_path}")
+        endforeach()
+    endfunction()
+    list_files_recursive(${OpenCL_INCLUDE_DIR})
+    get_filename_component(OpenCL_INCLUDE_DIR ${OpenCL_INCLUDE_DIR} DIRECTORY) # get Parent folder
     message(STATUS "[mac] OpenCL include directory: ${OpenCL_INCLUDE_DIR}")
     # Include the directory and ensure it's used for this target
     target_include_directories(image_processing_lib SYSTEM PUBLIC ${OpenCL_INCLUDE_DIR})
