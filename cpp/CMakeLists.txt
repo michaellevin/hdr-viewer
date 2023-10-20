@@ -48,7 +48,7 @@ if(APPLE)
         endforeach()
     endfunction()
     list_files_recursive(${OpenCL_INCLUDE_DIR})
-    get_filename_component(OpenCL_INCLUDE_DIR ${OpenCL_INCLUDE_DIR} DIRECTORY) # get Parent folder
+    # get_filename_component(OpenCL_INCLUDE_DIR ${OpenCL_INCLUDE_DIR} DIRECTORY) # get Parent folder
     message(STATUS "[mac] OpenCL include directory: ${OpenCL_INCLUDE_DIR}")
     # Include the directory and ensure it's used for this target
     target_include_directories(image_processing_lib SYSTEM PUBLIC ${OpenCL_INCLUDE_DIR})
