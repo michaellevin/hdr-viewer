@@ -50,12 +50,7 @@ jobs:
       run: |
         brew install openimageio
         brew install pybind11
-        brew install opencl-headers
         brew install opencl-clhpp-headers
-    
-    # - name: Set CPPFLAGS for OpenCL headers
-    #   if: matrix.os == 'macos-latest'
-    #   run: echo "CPPFLAGS=-I/usr/local/opt/opencl-headers/include" >> $GITHUB_ENV
 
     # Windows: setup vcpkg and install OpenImageIO
     - name: Install vcpkg (Windows)
@@ -70,28 +65,28 @@ jobs:
       if: matrix.os == 'windows-latest'
       run: |
         .\vcpkg\vcpkg install openimageio:x64-windows pybind11:x64-windows opencl:x64-windows
-       
+
     - name: Create Build Environment
       run: cmake -E make_directory ${{github.workspace}}/build
 
     # [CONFIGURE CMAKE]
-    - name: Configure CMake on Ubuntu and macOS
+    - name: Configure CMake on Linux
       if: runner.os == 'Linux' 
       shell: bash
     #   working-directory: ${{github.workspace}}/build
       run: cmake ${{github.workspace}}/cpp -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=Release
 
-    - name: Configure CMake on Ubuntu and macOS
+    - name: Configure CMake on MacOS
       if: runner.os == 'macOS'
       shell: bash
-    #   working-directory: ${{github.workspace}}/build
-      run: cmake ${{github.workspace}}/cpp -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_DEPLOYMENT_TARGET=11.6 -Wno-dev
+      # working-directory: ${{github.workspace}}/build
+      # run: cmake ${{github.workspace}}/cpp -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_DEPLOYMENT_TARGET=11.6 -Wno-dev
+      run: cmake ${{github.workspace}}/cpp -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=Release -Wno-dev
 
     - name: Configure CMake on Windows
       if: runner.os == 'Windows'
       shell: bash
     #   working-directory: ${{github.workspace}}/build
-    #   run: cmake $GITHUB_WORKSPACE/cpp -B $GITHUB_WORKSPACE/build -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=./vcpkg/scripts/buildsystems/vcpkg.cmake
       run: |
         cmake $GITHUB_WORKSPACE/cpp -B $GITHUB_WORKSPACE/build -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=$GITHUB_WORKSPACE/vcpkg/scripts/buildsystems/vcpkg.cmake
 
@@ -102,27 +97,39 @@ jobs:
       run: cmake --build . --config Release
 
     # List the contents of the build output directory
-    - name: List build outputs
-      shell: bash
-      run: |
-        echo "Listing build outputs..."
-        if [ -d "${{github.workspace}}/build/Release" ]; then
-          # For systems that use a 'Release' directory
-          ls -R "${{github.workspace}}/build/Release"
-        else
-          # For systems that don't use a 'Release' directory
-          ls -R "${{github.workspace}}/build"
-        fi
+    # - name: List build outputs
+    #   shell: bash
+    #   run: |
+    #     echo "Listing build outputs..."
+    #     if [ -d "${{github.workspace}}/build/Release" ]; then
+    #       # For systems that use a 'Release' directory
+    #       ls -R "${{github.workspace}}/build/Release"
+    #     else
+    #       # For systems that don't use a 'Release' directory
+    #       ls -R "${{github.workspace}}/build"
+    #     fi
     
     # [PUBLISH ARTIFACTS]
-    - name: Upload Build Artifacts
+    - name: Prepare Artifacts for macOS/Linux
+      if: runner.os != 'Windows'
+      run: |
+        cd ${{github.workspace}}/build
+        # Find the .so file and rename it
+        find . -type f -name "libhdr_viewer_cpp.so" -exec bash -c 'mv $0 ${0/lib/}' {} \;
+      shell: bash
+
+    - name: Upload Artifacts for macOS/Linux
+      if: runner.os != 'Windows'
       uses: actions/upload-artifact@v3
       with:
-        # Artifact name
         name: hdr-viewer-py39-${{ runner.os }}
-        # Directory containing the build artifacts
-        path: |
-            ${{github.workspace}}/build/Release/*
-            ${{github.workspace}}/build/*.*
-        # Retention period in days (optional)
+        path: ${{github.workspace}}/build/hdr_viewer_cpp.so
+        retention-days: 5
+
+    - name: Upload Artifacts for Windows
+      if: runner.os == 'Windows'
+      uses: actions/upload-artifact@v3
+      with:
+        name: hdr-viewer-py39-${{ runner.os }}
+        path: ${{github.workspace}}/build/Release
         retention-days: 5
