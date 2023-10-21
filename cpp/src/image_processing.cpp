@@ -1,6 +1,3 @@
-// #define CL_HPP_TARGET_OPENCL_VERSION 300
-// #define CL_HPP_ENABLE_EXCEPTIONS 1
-
 #include "image_processing.h"
 
 #include <CL/opencl.hpp>
@@ -13,9 +10,91 @@
 
 #include "timer.h"
 
+/* Version A: Open several kernel files from the folder */
+// ImageProcessor::ImageProcessor() {
+//     try {
+//         // Set GPU Context
+//         context = cl::Context(CL_DEVICE_TYPE_GPU);
+//         std::vector<cl::Device> devices =
+//         context.getInfo<CL_CONTEXT_DEVICES>();
+//         // Print device details
+//         for (const auto& device : devices) {
+//             std::string deviceName = device.getInfo<CL_DEVICE_NAME>();
+//             std::string deviceVendor = device.getInfo<CL_DEVICE_VENDOR>();
+//             cl_uint deviceComputeUnits =
+//                 device.getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>();
+
+//             std::cout << "Device Name: " << deviceName << "\n";
+//             std::cout << "Device Vendor: " << deviceVendor << "\n";
+//             std::cout << "Device Max Compute Units: " << deviceComputeUnits
+//                       << "\n";
+//         }
+
+//         // Load OpenCL source code
+//         std::vector<std::string> paths = {
+//             // "../../cpp/kernels/apply_gamma.cl",
+//             // "../../cpp/kernels/apply_exposure.cl",
+//             "../../cpp/kernels/apply_exposure_gamma.cl"};
+//         std::filesystem::path currentPath = std::filesystem::current_path();
+//         std::cout << "Current working directory: " << currentPath <<
+//         std::endl; cl::Program::Sources sources; for (const auto& path :
+//         paths) {
+//             std::ifstream sourceFile(path);
+//             if (!sourceFile.is_open()) {
+//                 // std::cerr << "Error opening OpenCL source file at " <<
+//                 path
+//                 //           << std::endl;
+//                 // exit(EXIT_FAILURE);
+//                 throw std::runtime_error(
+//                     "Error opening OpenCL source file at " + path);
+//             }
+//             std::string
+//             sourceCode(std::istreambuf_iterator<char>(sourceFile),
+//                                    (std::istreambuf_iterator<char>()));
+
+//             // std::cout << "OpenCL Source Code from " << path << ":\n";
+//             // std::cout << "------------------------------------\n";
+//             // std::cout << sourceCode << "\n";
+//             // std::cout << "------------------------------------\n";
+
+//             cl::Program::Sources source;
+//             source.push_back({sourceCode.c_str(), sourceCode.length() + 1});
+
+//             cl::Program program(context, source);
+//             if (program.build(devices) != CL_SUCCESS) {
+//                 std::cerr << "OpenCL build error: "
+//                           << program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(
+//                                  devices[0])
+//                           << std::endl;
+//                 // exit(EXIT_FAILURE);
+//                 throw std::runtime_error(
+//                     "OpenCL build error: " +
+//                     program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(devices[0]));
+//             }
+//             std::filesystem::path fs_path(path);
+//             std::string key = fs_path.stem().string();
+//             programs[key] = program;
+//         }
+//     } catch (const cl::Error& e) {
+//         // Handle OpenCL exceptions
+//         std::cerr << "Exception in ImageProcessor: " << e.what() << " : "
+//                   << e.err() << std::endl;
+//         throw;  // rethrow to propagate the error
+//     } catch (const std::exception& e) {
+//         // Handle standard exceptions
+//         std::cerr << "Exception in ImageProcessor: " << e.what() <<
+//         std::endl; throw;  // rethrow to propagate the error
+//     } catch (...) {
+//         // Handle all other types of exceptions
+//         std::cerr << "An unknown exception occurred in ImageProcessor"
+//                   << std::endl;
+//         throw;  // rethrow to propagate the error
+//     }
+// }
+
+// Version B: OpenCL kernel file in-line
 ImageProcessor::ImageProcessor() {
     try {
-        // Set GPU Context
         context = cl::Context(CL_DEVICE_TYPE_GPU);
         std::vector<cl::Device> devices = context.getInfo<CL_CONTEXT_DEVICES>();
         // Print device details
@@ -31,64 +110,61 @@ ImageProcessor::ImageProcessor() {
                       << "\n";
         }
 
-        // Load OpenCL source code
-        // TODO: REPLACE WITH IN-LINE CODE
-        std::vector<std::string> paths = {
-            // "../../cpp/kernels/apply_gamma.cl",
-            // "../../cpp/kernels/apply_exposure.cl",
-            "../../cpp/kernels/apply_exposure_gamma.cl"};
-        std::filesystem::path currentPath = std::filesystem::current_path();
-        std::cout << "Current working directory: " << currentPath << std::endl;
+        // Define your OpenCL kernel code as a string.
+        // This is a raw string literal encompassing multiple lines.
+        std::string kernelCode = R"(
+            __kernel void apply_exposure_gamma(
+                __global float* pixels, 
+                const unsigned int count,
+                __global float* params, 
+                const unsigned int param_count) 
+            {
+                if(param_count != 2) {
+                    return;
+                }
+
+                int gid = get_global_id(0);
+                if(gid < count) {
+                    float exposure = params[0];
+                    float inv_gamma = params[1];
+                    
+                    pixels[gid] = pixels[gid] * pow(2.0f, exposure);
+                    pixels[gid] = pow(pixels[gid], inv_gamma);
+                }
+            }
+        )";  // End of raw string literal
+
+        // Build the program from the kernel source code
         cl::Program::Sources sources;
-        for (const auto& path : paths) {
-            std::ifstream sourceFile(path);
-            if (!sourceFile.is_open()) {
-                // std::cerr << "Error opening OpenCL source file at " << path
-                //           << std::endl;
-                // exit(EXIT_FAILURE);
-                throw std::runtime_error(
-                    "Error opening OpenCL source file at " + path);
-            }
-            std::string sourceCode(std::istreambuf_iterator<char>(sourceFile),
-                                   (std::istreambuf_iterator<char>()));
+        sources.push_back(
+            {kernelCode.c_str(),
+             kernelCode.length() + 1});  // The '+1' is to account for the
+                                         // string's null terminator
 
-            // std::cout << "OpenCL Source Code from " << path << ":\n";
-            // std::cout << "------------------------------------\n";
-            // std::cout << sourceCode << "\n";
-            // std::cout << "------------------------------------\n";
-
-            cl::Program::Sources source;
-            source.push_back({sourceCode.c_str(), sourceCode.length() + 1});
-
-            cl::Program program(context, source);
-            if (program.build(devices) != CL_SUCCESS) {
-                std::cerr << "OpenCL build error: "
-                          << program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(
-                                 devices[0])
-                          << std::endl;
-                // exit(EXIT_FAILURE);
-                throw std::runtime_error(
-                    "OpenCL build error: " +
-                    program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(devices[0]));
-            }
-            std::filesystem::path fs_path(path);
-            std::string key = fs_path.stem().string();
-            programs[key] = program;
+        cl::Program program(context, sources);
+        if (program.build(devices) != CL_SUCCESS) {
+            std::cerr << "OpenCL build error: "
+                      << program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(devices[0])
+                      << std::endl;
+            throw std::runtime_error(
+                "OpenCL build error: " +
+                program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(devices[0]));
         }
+
+        // Store the compiled program for later use
+        programs["apply_exposure_gamma"] = program;
+
     } catch (const cl::Error& e) {
-        // Handle OpenCL exceptions
         std::cerr << "Exception in ImageProcessor: " << e.what() << " : "
                   << e.err() << std::endl;
-        throw;  // rethrow to propagate the error
+        throw;
     } catch (const std::exception& e) {
-        // Handle standard exceptions
         std::cerr << "Exception in ImageProcessor: " << e.what() << std::endl;
-        throw;  // rethrow to propagate the error
+        throw;
     } catch (...) {
-        // Handle all other types of exceptions
         std::cerr << "An unknown exception occurred in ImageProcessor"
                   << std::endl;
-        throw;  // rethrow to propagate the error
+        throw;
     }
 }
 
