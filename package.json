@@ -1,0 +1,25 @@
+{
+    "name": "hdr-viewer",
+    "version": "0.3.0",
+    "description": "HDR Viewer",
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/michaellevin/hdr-viewer.git"
+    },
+    "release": {
+        "branches": [ "main" ]
+    },
+    "keywords": [ "exr", "hdr"],
+    "author": "ML",
+    "license": "ISC",
+    "dependencies": {},
+    "devDependencies": {
+        "semantic-release": "latest",
+        "@semantic-release/github": "latest",
+        "@semantic-release/changelog": "latest",
+        "@semantic-release/git": "latest"
+    }
+}
