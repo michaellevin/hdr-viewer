@@ -38,22 +38,17 @@ if(APPLE)
         message("Detected Apple Silicon (ARM architecture).")
         execute_process(COMMAND find /opt/homebrew/Cellar/opencl-clhpp-headers 
                         -name "opencl.hpp" OUTPUT_VARIABLE OpenCL_INCLUDE_DIR)
-        get_filename_component(OpenCL_INCLUDE_DIR ${OpenCL_INCLUDE_DIR} DIRECTORY) # get Parent folder
-        get_filename_component(OpenCL_INCLUDE_DIR ${OpenCL_INCLUDE_DIR} DIRECTORY) # get Parent folder
     elseif(CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "x86_64")
         message("Detected Intel architecture.")
         # get_filename_component(OpenCL_INCLUDE_DIR ${OpenCL_INCLUDE_DIR} DIRECTORY) # get Parent folder
         execute_process(COMMAND find /usr/local/Cellar/opencl-clhpp-headers 
-                        -name "opencl.hpp" OUTPUT_VARIABLE OpenCL_INCLUDE_DIR)
-        get_filename_component(OpenCL_INCLUDE_DIR ${OpenCL_INCLUDE_DIR} DIRECTORY) # get Parent folder
-        get_filename_component(OpenCL_INCLUDE_DIR ${OpenCL_INCLUDE_DIR} DIRECTORY) # get Parent folder
-    else()
-        message("Detected other architecture: ${CMAKE_HOST_SYSTEM_PROCESSOR}")
-        get_filename_component(OpenCL_INCLUDE_DIR ${OpenCL_INCLUDE_DIR} DIRECTORY) # get Parent folder
+                        -name "opencl.hpp" OUTPUT_VARIABLE OpenCL_INCLUDE_DIR)    
     endif()
     if(NOT OpenCL_INCLUDE_DIR)
         message(FATAL_ERROR "OpenCL include path not found!")
     endif()
+    get_filename_component(OpenCL_INCLUDE_DIR ${OpenCL_INCLUDE_DIR} DIRECTORY) # get Parent folder
+    get_filename_component(OpenCL_INCLUDE_DIR ${OpenCL_INCLUDE_DIR} DIRECTORY) # get Parent folder
     message(STATUS "[${CMAKE_SYSTEM_NAME}] OpenCL include directory: ${OpenCL_INCLUDE_DIR}")
     # Include the directory and ensure it's used for this target
     target_include_directories(image_processing_lib SYSTEM PUBLIC ${OpenCL_INCLUDE_DIR})
