@@ -6,12 +6,13 @@
 #define CL_HPP_TARGET_OPENCL_VERSION 300
 #endif
 #define CL_HPP_ENABLE_EXCEPTIONS 1
-// #include <CL/opencl.hpp>
-#if __has_include(<CL/opencl.hpp>)
+
 #include <CL/opencl.hpp>
-#else
-#include <opencl.h>
-#endif
+// #if __has_include(<CL/opencl.hpp>)
+// #include <CL/opencl.hpp>
+// #else
+// #include <opencl.h>
+// #endif
 
 #include <map>
 #include <string>
