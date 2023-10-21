@@ -22,7 +22,7 @@ find_package(OpenImageIO CONFIG REQUIRED)
 find_package(pybind11 CONFIG REQUIRED)
 find_package(OpenCL REQUIRED)
 
-# file(GLOB SOURCES "src/*.cpp") # Specify the executable and its source files. Including all .cpp files in the src directory.
+# file(GLOB SOURCES "src/*.cpp") # Specify the executable and its source files. 
 set(SOURCES
     src/image_io.cpp
     src/image_processing.cpp
@@ -34,30 +34,30 @@ target_include_directories(image_processing_lib PUBLIC include)
 if(APPLE)
     add_compile_definitions(USE_OPENCL_120)
     # Mac: find the base directory containing 'CL/opencl.hpp'
-    find_path(OpenCL_INCLUDE_DIR
-        NAMES CL/opencl.hpp  
-    )
+    if(CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "arm64")
+        message("Detected Apple Silicon (ARM architecture).")
+        execute_process(COMMAND find /opt/homebrew/Cellar/opencl-clhpp-headers 
+                        -name "opencl.hpp" OUTPUT_VARIABLE OpenCL_INCLUDE_DIR)
+        get_filename_component(OpenCL_INCLUDE_DIR ${OpenCL_INCLUDE_DIR} DIRECTORY) # get Parent folder
+        get_filename_component(OpenCL_INCLUDE_DIR ${OpenCL_INCLUDE_DIR} DIRECTORY) # get Parent folder
+    elseif(CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "x86_64")
+        message("Detected Intel architecture.")
+        get_filename_component(OpenCL_INCLUDE_DIR ${OpenCL_INCLUDE_DIR} DIRECTORY) # get Parent folder
+    else()
+        message("Detected other architecture: ${CMAKE_HOST_SYSTEM_PROCESSOR}")
+        get_filename_component(OpenCL_INCLUDE_DIR ${OpenCL_INCLUDE_DIR} DIRECTORY) # get Parent folder
+    endif()
     if(NOT OpenCL_INCLUDE_DIR)
         message(FATAL_ERROR "OpenCL include path not found!")
     endif()
-    function(list_files_recursive directory)
-        message(STATUS "Listing files recursively in directory: ${directory}")
-        file(GLOB_RECURSE all_files RELATIVE "${directory}" "${directory}/*")
-        foreach(file_path ${all_files})
-            message(STATUS "${file_path}")
-        endforeach()
-    endfunction()
-    list_files_recursive(${OpenCL_INCLUDE_DIR})
-    # get_filename_component(OpenCL_INCLUDE_DIR ${OpenCL_INCLUDE_DIR} DIRECTORY) # get Parent folder
-    message(STATUS "[mac] OpenCL include directory: ${OpenCL_INCLUDE_DIR}")
+    message(STATUS "[${CMAKE_SYSTEM_NAME}] OpenCL include directory: ${OpenCL_INCLUDE_DIR}")
     # Include the directory and ensure it's used for this target
     target_include_directories(image_processing_lib SYSTEM PUBLIC ${OpenCL_INCLUDE_DIR})
 else()
     # Win/Linux
-    message(STATUS "[win/linux] OpenCL include directories: ${OpenCL_INCLUDE_DIRS}")
-    target_include_directories(image_processing_lib PUBLIC ${OpenCL_INCLUDE_DIRS})
+    message(STATUS "[${CMAKE_SYSTEM_NAME}] OpenCL include directory: ${OpenCL_INCLUDE_DIR}")
+    target_include_directories(image_processing_lib SYSTEM PUBLIC ${OpenCL_INCLUDE_DIR})
 endif()
-
 
 # target_include_directories(image_processing_lib PUBLIC ${OpenCL_INCLUDE_DIRS})
 target_link_libraries(image_processing_lib PRIVATE OpenImageIO::OpenImageIO ${OpenCL_LIBRARIES})  # Link against OpenCL
