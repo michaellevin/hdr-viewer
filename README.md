@@ -14,8 +14,9 @@ Follow these instructions to set up the project on your local machine for develo
 ### Prerequisites
 - Git
 - CMake (3.8 or higher)
-- Python (3.7 or higher)
+- Python (3.9 or higher)
 - Homebrew (for macOS users)
+- vcpkg (for Windows users)
 
 ### Windows Setup
 1. **Install vcpkg:** We use vcpkg to manage our C++ dependencies. To install it, clone the vcpkg repository and run the bootstrap script as follows:
@@ -36,22 +37,18 @@ This makes the installed libraries globally available to your build systems.
 .\vcpkg\vcpkg install openimageio:x64-windows pybind11:x64-windows opencl:x64-windows
 ```
 
-4. **Python setup:** For the Python part, you need to install pybind11 via pip:
-
-```bash
-pip install pybind11
-```
-
-5. **Environment Variable:** It is recommended to set an environment variable for VCPKG_ROOT:
+4. **Environment Variable:** It is recommended to set an environment variable for VCPKG_ROOT:
 
 ```bash
 setx VCPKG_ROOT <path_to_vcpkg_installation>
 ```
 
-6. **CMake Configuration:** While setting up your project with CMake, add the following entry to your toolchain settings to make sure CMake uses the vcpkg toolchain:
+5. **CMake Configuration:** While setting up your project with CMake, add the vcpkg entry to your toolchain settings to make sure CMake uses the vcpkg toolchain:
 
-```json
-"CMAKE_TOOLCHAIN_FILE": "${env:VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+```bash
+cmake -E make_directory ./build
+cmake ./cpp -B ./build -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=${env:VCPKG_ROOT}/vcpkg/scripts/buildsystems/vcpkg.cmake
+cmake --build . --config Release
 ```
 
 ## macOS Setup
@@ -66,10 +63,24 @@ brew install pybind11
 brew install opencl-clhpp-headers
 ```
 
-**CMake Configuration for Older macOS Versions:** If you're building on an older version of macOS, ensure you set the deployment target for compatibility. Add the following flag to your CMake configuration command:
+**CMake Configuration for Older macOS Versions:** If you're building on an older version of macOS, ensure you set the deployment target for compatibility. 
 
 ```bash
--DCMAKE_OSX_DEPLOYMENT_TARGET=11.6
+cmake -E make_directory ./build
+cmake ./cpp -B ./build -DCMAKE_BUILD_TYPE=Release
+cmake --build . --config Release
 ```
 
+If you need your application to support older versions of macOS, you can specify the minimum OS version required for your project by adding a flag to your CMake configuration command. For example, to support macOS 11.6 or newer, you would use:
+```bash
+cmake .. -DCMAKE_OSX_DEPLOYMENT_TARGET=11.6
+```
+
+
+## Python setup
+For the Python part, you need to install dependencies via pip:
+
+```bash
+pip install -r requirements.txt
+```
 TBC
