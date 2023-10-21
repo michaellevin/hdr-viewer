@@ -42,6 +42,10 @@ if(APPLE)
         get_filename_component(OpenCL_INCLUDE_DIR ${OpenCL_INCLUDE_DIR} DIRECTORY) # get Parent folder
     elseif(CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "x86_64")
         message("Detected Intel architecture.")
+        # get_filename_component(OpenCL_INCLUDE_DIR ${OpenCL_INCLUDE_DIR} DIRECTORY) # get Parent folder
+        execute_process(COMMAND find /opt/homebrew/Cellar/opencl-clhpp-headers 
+                        -name "opencl.hpp" OUTPUT_VARIABLE OpenCL_INCLUDE_DIR)
+        get_filename_component(OpenCL_INCLUDE_DIR ${OpenCL_INCLUDE_DIR} DIRECTORY) # get Parent folder
         get_filename_component(OpenCL_INCLUDE_DIR ${OpenCL_INCLUDE_DIR} DIRECTORY) # get Parent folder
     else()
         message("Detected other architecture: ${CMAKE_HOST_SYSTEM_PROCESSOR}")
