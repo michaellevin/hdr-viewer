@@ -12,7 +12,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [macOS-latest] #, ubuntu-latest, windows-latest]
+        os: [macOS-latest, ubuntu-latest] #, windows-latest]
       fail-fast: false
 
     steps:
@@ -133,3 +133,83 @@ jobs:
         name: hdr-viewer-py39-${{ runner.os }}
         path: ${{github.workspace}}/build/Release
         retention-days: 5
+  
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    # Download Artifacts
+    - name: Download Artifacts
+      uses: actions/download-artifact@master
+      with:
+        path: artifacts
+    
+    - name: Flatten directories structure after download
+      run: |
+        temp_dir=$(pwd)/artifacts_temp
+        mkdir -p "$temp_dir"
+        for dir in $(pwd)/artifacts/*; do
+            if [[ -d "$dir" ]]; then
+                mv "$dir"/* "$temp_dir/"
+                rmdir "$dir"
+            fi
+        done
+        mv "$temp_dir"/* $(pwd)/artifacts/
+        rmdir "$temp_dir"
+
+    # Setup Node.js environment
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '20'
+
+    # Install semantic-release and plugins
+    - name: Install dependencies
+      run: |
+        npm install semantic-release @semantic-release/github @semantic-release/changelog @semantic-release/git
+
+    # Run semantic-release
+    - name: Semantic Release
+      id: semantic
+      run: npx semantic-release
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+    - name: Get latest release
+      id: latest_release
+      run: |
+        LATEST_RELEASE_URL=$(curl --header 'authorization: Bearer ${{ secrets.GITHUB_TOKEN }}' \
+            --url 'https://api.github.com/repos/${{ github.repository }}/releases/latest' \
+            --silent \
+            --location \
+            | jq -r '.upload_url')
+        echo "Latest release URL is $LATEST_RELEASE_URL"
+        echo "upload_url=$LATEST_RELEASE_URL" >> $GITHUB_ENV
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: List Artifacts
+      run: |
+        ls -lR artifacts/
+
+    - name: Upload Assets
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        ls -lRh artifacts/
+        BASE_UPLOAD_URL="${{ env.upload_url }}"
+        BASE_UPLOAD_URL="${BASE_UPLOAD_URL/\{\?name,label\}/}" # Remove {?name,label} from the URL
+        for asset in $(pwd)/artifacts/*; do
+          echo "asset > $asset"
+          asset_name=$(basename $asset)
+          content_type=$(file --mime-type -b $asset)        
+          curl \
+            -H "Authorization: token $GITHUB_TOKEN" \
+            -H "Content-Type: $content_type" \
+            --data-binary "@$asset" \
+            "${BASE_UPLOAD_URL}?name=$asset_name&label=$asset_name"
+        done
